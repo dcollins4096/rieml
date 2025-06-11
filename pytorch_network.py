@@ -3,6 +3,35 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 import pdb
+import torch
+import torch.nn as nn
+
+class Conv1DThreeChannel(nn.Module):
+    def __init__(self, input_length):
+        super(Conv1DThreeChannel, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Conv1d(3, 16, kernel_size=3, padding=1),  # input channels = 3
+            nn.ReLU(),
+            nn.Conv1d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU()
+        )
+        self.decoder = nn.Sequential(
+            nn.Conv1d(32, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(16, 3, kernel_size=3, padding=1)   # output channels = 3
+        )
+
+    def forward(self, x):
+        # x shape: (batch_size, 3, input_length)
+        x = self.encoder(x)
+        x = self.decoder(x)
+        return x  # shape: (batch_size, 3, input_length)
+
+# Example usage:
+#model = Conv1DThreeChannel(input_length=128)
+#example_input = torch.randn(10, 3, 128)  # batch of 10, 3 channels, length 128
+#output = model(example_input)
+#print(output.shape)  # should be (10, 3, 128)
 
 class FeedforwardNN(nn.Module):
     def __init__(self, sizes):
