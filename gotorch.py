@@ -20,12 +20,14 @@ import tube_loader
 import pdb
 #data = tube_loader.load_many()
 data = tube_loader.read_one("tubes_take2.h5")
-Ntrain=109
+Ntrain=10
 train = data[:Ntrain]
 test = data[Ntrain:]
 ##model = pyt.Conv1DThreeChannel()
-model = pyt.NikhilsUnet()
-pyt.train_network(model,data,epochs=100,mini_batch_size=5,lr=1e-2)
+#model = pyt.NikhilsUnet()
+#model = pyt.TwoU(base_filters=64)
+model = pyt.TrivialPredictor()
+pyt.train_network(model,train,epochs=1000,mini_batch_size=5,lr=1e-4)
 mini_batch = train[0:1]
 #testme = torch.stack([torch.tensor(x, dtype=torch.float32) for x, y in mini_batch])
 testme = train[0:1]
