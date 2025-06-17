@@ -1,6 +1,9 @@
 
 import pytorch_network as pyt
 from importlib import reload
+import sys
+import os
+sys.stderr = open(os.devnull, 'w')
 import torch
 torch.backends.nnpack.enabled = False
 reload(pyt)
@@ -27,10 +30,11 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-if 'model' not in dir():
+if 'model' not in dir() or True:
     model = rieML_model.SixToThreeChannelNN(1000)
 if 1:
-    rieML_model.train(model,train,train_parameters,lr=1e-3, epochs = 30, batch_size=500, test_num=testnum, 
+    epoch = 30
+    rieML_model.train(model,train,train_parameters,lr=1e-3, epochs = epoch, batch_size=500, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
     subset = slice(0,5)

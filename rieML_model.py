@@ -22,6 +22,8 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     #criterion = nn.MSELoss()
     #criterion = nn.L1Loss()
     #optimizer = optim.SGD(model.parameters(), lr=lr)
+    fptr = open('output','w')
+    fptr.close()
     optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = weight_decay)
     n=-1
     losses=[]
@@ -42,7 +44,8 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             #pdb.set_trace()
             n+=1
             optimizer.zero_grad()
-            output = model(param).view(3,1000)
+            output1=model(param)
+            output = output1.view(3,1000)
             loss = model.criterion(output, datum[0])
             #print(datum[0][0][:10])
 
@@ -52,6 +55,9 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         losses += local_losses
 
         print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
+        fptr = open("output","r+")
+        fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
+        fptr.close()
             #if n%10000 == 0 and n>1:
             #    plt.clf()
             #    plt.plot(losses)
@@ -67,11 +73,13 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
 
 
 
-
+def smoothness_loss(y):
+    diff = y[:, 1:] - y[:, :-1]
+    return torch.mean(diff ** 2)
 
 
 class SixToThreeChannelNN(nn.Module):
-    def __init__(self, output_length: int, hidden_dims=(64, 128, 256,128, 64)):
+    def __init__(self, output_length: int, conv_channels=3,hidden_dims=(64, 128, 256,128, 64)):
         """
         Args:
             output_length: Length L of the 1D output array per channel.
@@ -88,9 +96,21 @@ class SixToThreeChannelNN(nn.Module):
             # Apply activation after every layer except the last
             if out_dim != dims[-1]:
                 layers.append(nn.ReLU(inplace=True))
-        self.net = nn.Sequential(*layers)
 
-        self.criterion = nn.MSELoss()
+        self.conv = nn.Sequential(
+                nn.Conv1d(3, conv_channels, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+                nn.Conv1d(conv_channels, conv_channels, kernel_size=3, stride=1, padding=1),
+                nn.ReLU(),
+                nn.Conv1d(conv_channels, 3, kernel_size=3, stride=1,padding=1)
+            )
+        self.net = nn.Sequential(*layers)
+        self.mse = nn.MSELoss()
+
+    def criterion(self,target,guess):
+        output = self.mse(target,guess) + smoothness_loss(guess)
+        return output
+        
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -100,10 +120,14 @@ class SixToThreeChannelNN(nn.Module):
             Tensor of shape (batch_size, 3, output_length)
         """
         # Forward pass through MLP → (batch_size, 3*L)
-        y = self.net(x)
+        x = self.net(x)
+        #x = x.view(x.size(0), 3, self.output_length) 
+        #x = x.view(-1,3,self.output_length)
+        #x = self.conv(x)
+
         # Reshape to (batch_size, 3, L)
-        y = y.view(-1, 3, self.output_length)
-        return y
+        x = x.view(-1, 3, self.output_length)
+        return x
 
 def test_plot(datalist, parameters,model, fname="plot"):
     nd=-1
