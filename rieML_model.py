@@ -26,6 +26,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     fptr.close()
     #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = weight_decay)
     optimizer = optim.Adam( model.parameters(), lr=lr)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -48,12 +49,13 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             output1=model(param)
             #output = output1.view(3,1000)
             #loss = model.criterion(output1, datum[0], param)
-            loss = model.criterion(output1, datum[0])
+            loss = model.criterion(output1, datum[1])
             #print(datum[0][0][:10])
 
             loss.backward()
             optimizer.step()
             local_losses.append(loss.item())
+        scheduler.step()
         losses += local_losses
 
         print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
@@ -101,20 +103,14 @@ class SixToThreeB(nn.Module):
             for _ in range(3)
         ])
         self.mse = nn.MSELoss()
-    def criterion(self,target,guess, param=None):
+    def criterion(self,target,guess):
         mse=self.mse(target,guess)
         N = target.shape[1]
-        if param is not None:
-            l2 = ((target[0][:N//2]-param[0])**2).mean()
-            l2+= ((target[0][N//2:]-param[1])**2).mean()
-            l2+= ((target[1][:N//2]-param[2])**2).mean()
-            l2+= ((target[1][N//2:]-param[3])**2).mean()
-            l2+= ((target[2][:N//2]-param[4])**2).mean()
-            l2+= ((target[2][N//2:]-param[5])**2).mean()
+        high_k = high_frequench_penalty(guess)
         #mmax = torch.abs(torch.max(target-guess))
         #print("Mse %0.2e max %0.2e"%(mse,mmax))
         #print("Mse %0.2e l2  %0.2e"%(mse,l2))
-        return mse#+mmax
+        return mse+high_k
 
     def forward(self, x):
         """
@@ -129,6 +125,34 @@ class SixToThreeB(nn.Module):
         y = torch.cat(outs, dim=1)  # (batch_size, 3, output_length)
         y=y.T
         return y
+
+def high_frequency_penalty(output, cutoff_ratio=0.3):
+    """
+    Penalize high-frequency components in the output.
+    
+    Args:
+        output: (batch_size, channels, length)
+        cutoff_ratio: fraction of frequencies to treat as low-frequency (0.3 means first 30%)
+        
+    Returns:
+        scalar penalty term
+    """
+
+    # FFT along spatial dimension
+    fft = torch.fft.rfft(output, dim=1)
+    
+    # Power spectrum
+    power = torch.abs(fft) ** 2
+    
+    # Determine cutoff index
+    n_freqs = fft.shape[-1]
+    cutoff = int(n_freqs * cutoff_ratio)
+
+    # High-frequency power only
+    high_freq_power = power[..., cutoff:]
+    
+    # Return mean power in high frequencies as penalty
+    return high_freq_power.mean()
 
 
 
@@ -170,11 +194,13 @@ class SixToThreeChannelNN(nn.Module):
 
     def criterion(self,target,guess):
         mse = self.mse(target,guess)
+        high_k = high_frequency_penalty(guess)
         #smooth = smoothness_loss(guess)
         #fourth_loss = fourth(target,guess)
         #output = self.mse(target,guess) + smoothness_loss(guess)
         #print("MSE %0.2e smooth %0.2e"%(mse,smooth))
-        return mse
+        #print("Mse %0.2e k  %0.2e"%(mse,high_k))
+        return mse+high_k
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
