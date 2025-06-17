@@ -22,7 +22,7 @@ parameters = torch.tensor(parameters,dtype=torch.float32)
 
 if 1:
     Ntrain=1200 #len(data) - 10
-    testnum=9
+    testnum=15
     train = data[:Ntrain]
     test = data[Ntrain:]
     test_parameters = parameters[Ntrain:]
@@ -33,7 +33,7 @@ if 1:
 if 'model' not in dir() or True:
     model = rieML_model.SixToThreeChannelNN(1000)
 if 1:
-    epoch = 30
+    epoch = 100
     rieML_model.train(model,train,train_parameters,lr=1e-3, epochs = epoch, batch_size=500, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:

@@ -79,7 +79,7 @@ def smoothness_loss(y):
 
 
 class SixToThreeChannelNN(nn.Module):
-    def __init__(self, output_length: int, conv_channels=3,hidden_dims=(64, 128, 256,128, 64)):
+    def __init__(self, output_length: int, conv_channels=3,hidden_dims=(64, 128, 64)):
         """
         Args:
             output_length: Length L of the 1D output array per channel.
@@ -108,7 +108,7 @@ class SixToThreeChannelNN(nn.Module):
         self.mse = nn.MSELoss()
 
     def criterion(self,target,guess):
-        output = self.mse(target,guess) + smoothness_loss(guess)
+        output = self.mse(target,guess) #+ smoothness_loss(guess)
         return output
         
 
