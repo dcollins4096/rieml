@@ -18,7 +18,8 @@ reload(rieML_model)
 data,parameters = tube_loader.read_one_parameters("tubes_take5.h5")
 data = torch.tensor(data,dtype=torch.float32)
 parameters = torch.tensor(parameters,dtype=torch.float32)
-
+#data = data[1:]
+#parameters = parameters[1:]
 
 if 1:
     Ntrain=2 #len(data) - 10
@@ -30,7 +31,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-if 'model' not in dir():
+if 0:
     #hidden_dims = 256,512,512,256
     #hidden_dims = 64,128,128,64
     #model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims)
@@ -45,6 +46,3 @@ if 1:
     subset = slice(0,10)
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum)
     zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum)
-if 0:
-    subset = slice(0,1)
-    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum)

@@ -31,7 +31,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     a = torch.arange(len(data))
     N = len(data)
     for epoch in range(epochs):
-        subset = slice(None)#torch.randint(0, N, (batch_size,))
+        subset = [0,1]
         #random.shuffle(a)
         #subset = a[:batch_size]
         data_subset =  data[subset]
@@ -101,7 +101,10 @@ class SixToThreeB(nn.Module):
         ])
         self.mse = nn.MSELoss()
     def criterion(self,target,guess):
-        return self.mse(target,guess)
+        mse=self.mse(target,guess)
+        #mmax = torch.abs(torch.max(target-guess))
+        #print("Mse %0.2e max %0.2e"%(mse,mmax))
+        return mse#+mmax
 
     def forward(self, x):
         """
@@ -200,6 +203,9 @@ def test_plot(datalist, parameters,model, fname="plot"):
             ax[nf].set(title='error %0.2e'%loss)
             ax[nf].plot( zzz, c='r')
             ax[nf].set(ylabel=field)
+        ax[0].set(ylim=[0,2])
+        ax[1].set(ylim=[0,2])
+        ax[2].set(ylim=[-1.1,1.1])
         fig.tight_layout()
         fig.savefig("%s/rieML_%s_%d"%(plot_dir,fname,nd))
         plt.close(fig)
