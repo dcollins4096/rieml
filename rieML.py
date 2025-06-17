@@ -22,7 +22,7 @@ parameters = torch.tensor(parameters,dtype=torch.float32)
 
 if 1:
     Ntrain=1200 #len(data) - 10
-    testnum=15
+    testnum=17
     train = data[:Ntrain]
     test = data[Ntrain:]
     test_parameters = parameters[Ntrain:]

@@ -108,7 +108,7 @@ class SixToThreeChannelNN(nn.Module):
         self.mse = nn.MSELoss()
 
     def criterion(self,target,guess):
-        output = self.mse(target,guess) #+ smoothness_loss(guess)
+        output = self.mse(target,guess) + smoothness_loss(guess)
         return output
         
 
