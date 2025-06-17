@@ -186,9 +186,9 @@ class SixToThreeChannelNN(nn.Module):
         """
         # Forward pass through MLP → (batch_size, 3*L)
         x = self.net(x)
-        #x = x.view(x.size(0), 3, self.output_length) 
+        x = x.view(1, 3, self.output_length) 
         #x = x.view(-1,3,self.output_length)
-        #x = self.conv(x)
+        x = x+ self.conv(x)
 
         # Reshape to (batch_size, 3, L)
         #x = x.view(-1, 3, self.output_length)

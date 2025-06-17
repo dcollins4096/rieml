@@ -23,7 +23,6 @@ parameters = torch.tensor(parameters,dtype=torch.float32)
 
 if 1:
     Ntrain=1000 #len(data) - 10
-    testnum=39
     train = data[:Ntrain]
     test = data[Ntrain:]
     test_parameters = parameters[Ntrain:]
@@ -31,13 +30,15 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
+testnum=53
 if 1:
-    #hidden_dims = 256,512,512,256
-    hidden_dims = 64,128,128,64
-    model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims)
+    hidden_dims = 256,512,512,256
+    #hidden_dims = 64,128,128,64
+    conv_channels=6
+    model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims, conv_channels=conv_channels)
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
 if 1:
-    epoch = 300
+    epoch = 400
     batch_size=50
     lr = 1e-4
     rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
