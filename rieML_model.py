@@ -79,7 +79,7 @@ def smoothness_loss(y):
 
 
 class SixToThreeChannelNN(nn.Module):
-    def __init__(self, output_length: int, conv_channels=3,hidden_dims=(64, 128, 64)):
+    def __init__(self, output_length: int, conv_channels=3,hidden_dims=(64, 128, 128,64)):
         """
         Args:
             output_length: Length L of the 1D output array per channel.
