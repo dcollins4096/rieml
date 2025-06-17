@@ -21,8 +21,8 @@ parameters = torch.tensor(parameters,dtype=torch.float32)
 
 
 if 1:
-    Ntrain=200 #len(data) - 10
-    testnum=20
+    Ntrain=2 #len(data) - 10
+    testnum=29
     train = data[:Ntrain]
     test = data[Ntrain:]
     test_parameters = parameters[Ntrain:]
@@ -31,14 +31,16 @@ if 1:
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
 if 'model' not in dir() or True:
-    model = rieML_model.SixToThreeChannelNN(1000)
+    #hidden_dims = 256,512,512,256
+    hidden_dims = 64,128,128,64
+    model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims)
 if 1:
-    epoch = 1200
-    batch_size=100
+    epoch = 300
+    batch_size=20
     lr = 1e-3
     rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
-    subset = slice(0,5)
+    subset = slice(0,10)
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum)
     zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum)

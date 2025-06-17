@@ -31,7 +31,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     a = torch.arange(len(data))
     N = len(data)
     for epoch in range(epochs):
-        subset = torch.randint(0, N, (batch_size,))
+        subset = slice(None)#torch.randint(0, N, (batch_size,))
         #random.shuffle(a)
         #subset = a[:batch_size]
         data_subset =  data[subset]
@@ -112,11 +112,11 @@ class SixToThreeChannelNN(nn.Module):
 
     def criterion(self,target,guess):
         mse = self.mse(target,guess)
-        smooth = smoothness_loss(guess)
-        fourth_loss = fourth(target,guess)
+        #smooth = smoothness_loss(guess)
+        #fourth_loss = fourth(target,guess)
         #output = self.mse(target,guess) + smoothness_loss(guess)
         #print("MSE %0.2e smooth %0.2e"%(mse,smooth))
-        return mse+smooth
+        return mse
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
