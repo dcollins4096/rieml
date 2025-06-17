@@ -46,8 +46,8 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             n+=1
             optimizer.zero_grad()
             output1=model(param)
-            output = output1.view(3,1000)
-            loss = model.criterion(output, datum[0])
+            #output = output1.view(3,1000)
+            loss = model.criterion(output1, datum[0])
             #print(datum[0][0][:10])
 
             loss.backward()
@@ -71,6 +71,51 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     plt.savefig("%s/loss_test_%d_%d"%(plot_dir,test_num,n))
 
 
+class MLP(nn.Module):
+    def __init__(self, in_dim, out_dim, hidden_dims=(128, 256, 128)):
+        super().__init__()
+        layers = []
+        dims = [in_dim] + list(hidden_dims) + [out_dim]
+        for i in range(len(dims)-1):
+            layers.append(nn.Linear(dims[i], dims[i+1]))
+            if i < len(dims) - 2:
+                layers.append(nn.ReLU())
+        self.net = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.net(x)
+
+
+class SixToThreeB(nn.Module):
+    def __init__(self, output_length: int, hidden_dims=(128, 256, 128)):
+        super().__init__()
+        self.output_length = output_length
+
+        # Shared encoder for input → latent vector
+        self.encoder = MLP(6, hidden_dims[-1], hidden_dims[:-1])
+
+        # Separate decoder heads for each output channel
+        self.heads = nn.ModuleList([
+            MLP(hidden_dims[-1], output_length, hidden_dims[::-1])  # decoder per channel
+            for _ in range(3)
+        ])
+        self.mse = nn.MSELoss()
+    def criterion(self,target,guess):
+        return self.mse(target,guess)
+
+    def forward(self, x):
+        """
+        x: shape (batch_size, 6)
+        returns: (batch_size, 3, output_length)
+        """
+        batch_size = x.size(0)
+        latent = self.encoder(x)  # (batch_size, latent_dim)
+
+        # Pass through each head
+        outs = [head(latent).unsqueeze(1) for head in self.heads]  # list of (batch,1,L)
+        y = torch.cat(outs, dim=1)  # (batch_size, 3, output_length)
+        y=y.T
+        return y
 
 
 
@@ -150,7 +195,7 @@ def test_plot(datalist, parameters,model, fname="plot"):
         for nf,field in enumerate(fields):
             ax[nf].plot( datum[0][nf], c='k')
             ax[nf].plot( datum[1][nf], c='k', linestyle='--')
-            zzz = z[0][nf].detach().numpy()
+            zzz = z[nf].detach().numpy()
             print("Is nan", np.isnan(zzz).sum(), nd, nf)
             ax[nf].set(title='error %0.2e'%loss)
             ax[nf].plot( zzz, c='r')
