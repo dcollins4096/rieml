@@ -31,7 +31,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     a = torch.arange(len(data))
     N = len(data)
     for epoch in range(epochs):
-        subset = [0,1]
+        subset = torch.tensor(random.sample(list(a),batch_size))
         #random.shuffle(a)
         #subset = a[:batch_size]
         data_subset =  data[subset]
@@ -47,6 +47,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             optimizer.zero_grad()
             output1=model(param)
             #output = output1.view(3,1000)
+            #loss = model.criterion(output1, datum[0], param)
             loss = model.criterion(output1, datum[0])
             #print(datum[0][0][:10])
 
@@ -100,10 +101,19 @@ class SixToThreeB(nn.Module):
             for _ in range(3)
         ])
         self.mse = nn.MSELoss()
-    def criterion(self,target,guess):
+    def criterion(self,target,guess, param=None):
         mse=self.mse(target,guess)
+        N = target.shape[1]
+        if param is not None:
+            l2 = ((target[0][:N//2]-param[0])**2).mean()
+            l2+= ((target[0][N//2:]-param[1])**2).mean()
+            l2+= ((target[1][:N//2]-param[2])**2).mean()
+            l2+= ((target[1][N//2:]-param[3])**2).mean()
+            l2+= ((target[2][:N//2]-param[4])**2).mean()
+            l2+= ((target[2][N//2:]-param[5])**2).mean()
         #mmax = torch.abs(torch.max(target-guess))
         #print("Mse %0.2e max %0.2e"%(mse,mmax))
+        #print("Mse %0.2e l2  %0.2e"%(mse,l2))
         return mse#+mmax
 
     def forward(self, x):
@@ -181,7 +191,8 @@ class SixToThreeChannelNN(nn.Module):
         #x = self.conv(x)
 
         # Reshape to (batch_size, 3, L)
-        x = x.view(-1, 3, self.output_length)
+        #x = x.view(-1, 3, self.output_length)
+        x = x.view( 3, self.output_length)
         return x
 
 def test_plot(datalist, parameters,model, fname="plot"):
