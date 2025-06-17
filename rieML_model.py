@@ -24,7 +24,8 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     #optimizer = optim.SGD(model.parameters(), lr=lr)
     fptr = open('output','w')
     fptr.close()
-    optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = weight_decay)
+    #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = weight_decay)
+    optimizer = optim.Adam( model.parameters(), lr=lr)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -108,8 +109,11 @@ class SixToThreeChannelNN(nn.Module):
         self.mse = nn.MSELoss()
 
     def criterion(self,target,guess):
-        output = self.mse(target,guess) + smoothness_loss(guess)
-        return output
+        mse = self.mse(target,guess)
+        smooth = smoothness_loss(guess)
+        #output = self.mse(target,guess) + smoothness_loss(guess)
+        #print("MSE %0.2e smooth %0.2e"%(mse,smooth))
+        return mse+smooth
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

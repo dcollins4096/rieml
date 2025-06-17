@@ -5,7 +5,7 @@ import sys
 import os
 sys.stderr = open(os.devnull, 'w')
 import torch
-torch.backends.nnpack.enabled = False
+#torch.backends.nnpack.enabled = False
 reload(pyt)
 import pdb
 import numpy as np
@@ -21,8 +21,8 @@ parameters = torch.tensor(parameters,dtype=torch.float32)
 
 
 if 1:
-    Ntrain=1200 #len(data) - 10
-    testnum=17
+    Ntrain=200 #len(data) - 10
+    testnum=20
     train = data[:Ntrain]
     test = data[Ntrain:]
     test_parameters = parameters[Ntrain:]
@@ -33,8 +33,10 @@ if 1:
 if 'model' not in dir() or True:
     model = rieML_model.SixToThreeChannelNN(1000)
 if 1:
-    epoch = 100
-    rieML_model.train(model,train,train_parameters,lr=1e-3, epochs = epoch, batch_size=500, test_num=testnum, 
+    epoch = 1200
+    batch_size=100
+    lr = 1e-3
+    rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
     subset = slice(0,5)
