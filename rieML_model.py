@@ -213,11 +213,8 @@ class SixToThreeChannelNN(nn.Module):
         # Forward pass through MLP → (batch_size, 3*L)
         x = self.net(x)
         x = x.view(1, 3, self.output_length) 
-        #x = x.view(-1,3,self.output_length)
         x = x+ self.conv(x)
 
-        # Reshape to (batch_size, 3, L)
-        #x = x.view(-1, 3, self.output_length)
         x = x.view( 3, self.output_length)
         return x
 
@@ -227,7 +224,7 @@ def test_plot(datalist, parameters,model, fname="plot"):
         nd+=1
         #pdb.set_trace()
         z = model(param)
-        loss = model.criterion(z, datum[0])
+        loss = model.criterion(z, datum[1])
         print(loss)
 
         fig,ax=plt.subplots(1,3,figsize=(12,4))

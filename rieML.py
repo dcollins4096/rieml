@@ -30,7 +30,15 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=56
+testnum=60
+import mixednn 
+reload(mixednn)
+if 1:
+
+    hidden_dims=512,512
+    conv_channels=64
+    model = mixednn.HybridShockTubeNN(hidden_dims=hidden_dims, conv_channels=conv_channels)
+
 if 0:
     hidden_dims = 256,512,512,256
     #hidden_dims = 64,128,128,64
@@ -39,7 +47,7 @@ if 0:
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
 if 1:
     epoch = 1000
-    batch_size=75
+    batch_size=100
     lr = 1e-3
     rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
