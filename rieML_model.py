@@ -15,6 +15,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+import ptoc
+from importlib import reload
+reload(ptoc)
 plot_dir = "%s/plots"%os.environ['HOME']
 
 def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, weight_decay=None):
@@ -218,7 +221,7 @@ class SixToThreeChannelNN(nn.Module):
         x = x.view( 3, self.output_length)
         return x
 
-def test_plot(datalist, parameters,model, fname="plot"):
+def test_plot(datalist, parameters,model, fname="plot", characteristic=False):
     nd=-1
     for datum, param in zip(datalist,parameters):
         nd+=1
@@ -226,8 +229,17 @@ def test_plot(datalist, parameters,model, fname="plot"):
         z = model(param)
         loss = model.criterion(z, datum[1])
         print(loss)
+        rows=1
+        if characteristic:
+            rows=2
 
-        fig,ax=plt.subplots(1,3,figsize=(12,4))
+
+        fig,axes=plt.subplots(rows,3,figsize=(12,4))
+        if characteristic:
+            ax,axb=axes
+        else:
+            ax=axes
+
         fields = ['density','pressure','velocity']
         for nf,field in enumerate(fields):
             ax[nf].plot( datum[0][nf], c='k')
@@ -240,6 +252,25 @@ def test_plot(datalist, parameters,model, fname="plot"):
         ax[0].set(ylim=[0,2])
         ax[1].set(ylim=[0,2])
         ax[2].set(ylim=[-1.1,1.1])
+        if characteristic:
+            ICchar = ptoc.primitive_to_characteristic(datum[0])
+            REchar = ptoc.primitive_to_characteristic(datum[1])
+            MOchar = ptoc.primitive_to_characteristic(z)
+            #pdb.set_trace()
+
+            fields = ['w1','w2','w3']
+            for nf,field in enumerate(fields):
+                axb[nf].plot( ICchar[nf], c='k')
+                #pdb.set_trace()
+                axb[nf].plot( REchar[nf], c='k', linestyle='--')
+                #print("Is nan", np.isnan(zzz).sum(), nd, nf)
+                zzz = MOchar[nf].detach().numpy()
+                axb[nf].set(title='error %0.2e'%loss)
+                axb[nf].plot( zzz, c='r')
+                axb[nf].set(ylabel=field)
+            #ax[0].set(ylim=[0,2])
+            #ax[1].set(ylim=[0,2])
+            #ax[2].set(ylim=[-1.1,1.1])
         fig.tight_layout()
         fig.savefig("%s/rieML_%s_%d"%(plot_dir,fname,nd))
         plt.close(fig)

@@ -30,13 +30,15 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=60
+testnum=63
 import mixednn 
 reload(mixednn)
 if 1:
 
     hidden_dims=512,512
     conv_channels=64
+    hidden_dims = 128, 128
+    conv_channels = 32
     model = mixednn.HybridShockTubeNN(hidden_dims=hidden_dims, conv_channels=conv_channels)
 
 if 0:
@@ -46,12 +48,16 @@ if 0:
     model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims, conv_channels=conv_channels)
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
 if 1:
-    epoch = 1000
-    batch_size=100
+    epoch = 300
+    batch_size=50
     lr = 1e-3
     rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
-    subset = slice(0,10)
-    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum)
-    zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum)
+    subset = slice(0,1)
+    characteristic=True
+    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
+                              characteristic=characteristic)
+if 0:
+    zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
+                              characteristic=characteristic)
