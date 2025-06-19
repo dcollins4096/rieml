@@ -17,10 +17,23 @@ class HybridShockTubeNN(nn.Module):
         dil = 1
         kern = 5
         padding = dil*(kern-1)//2
+        dil2 = 2
+        padding2 = dil2*(kern-1)//2
+        dil3 = 4
+        padding3 = dil3*(kern-1)//2
+        dil4 = 8
+        padding4 = dil4*(kern-1)//2
         self.conv1 = nn.Sequential(
             nn.Conv1d(3, conv_channels, kernel_size=kern, padding=padding, dilation=dil),
             nn.ReLU(),
-            nn.Conv1d(conv_channels, 3, kernel_size=kern, padding=padding, dilation=dil)
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding2, dilation=dil2),
+            #nn.ReLU(),
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding3, dilation=dil3),
+            #nn.ReLU(),
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding4, dilation=dil4),
+            #nn.ReLU(),
+            nn.Conv1d(conv_channels, 3, kernel_size=kern, padding=padding, dilation=dil),
+            nn.ReLU()
         )
 
         # FC block 2: merge spatial info
@@ -47,18 +60,31 @@ class HybridShockTubeNN(nn.Module):
         self.forward = self.prim_forward
 
         self.mse=nn.MSELoss()
+        #self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
 
     def criterion(self,target,guess):
         mse = self.mse(target,guess)
-        tv = torch.abs(guess[1:]-guess[:-1]).mean()
-        high_k = rieML_model.high_frequency_penalty(guess)
+        #dx_target = target[:,1:]-target[:,:-1]
+        #dx_guess  = guess[:,1:]-guess[:,:-1]
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
+        #sobolev = sobolev_weight*self.mse(dx_target,dx_guess)
+        #sobolev = self.mse(dx_target,dx_guess)
+
+        #high_k_weight = torch.exp(self.log_high_k_weight)
+        #high_k = high_k_weight*rieML_model.high_frequency_penalty(guess)
+
+        #tv_weight = torch.exp(self.log_tv_weight)
+        #tv = tv_weight*torch.abs(guess[1:]-guess[:-1]).mean()
         #smooth = smoothness_loss(guess)
         #fourth_loss = fourth(target,guess)
         #output = self.mse(target,guess) + smoothness_loss(guess)
         #print("MSE %0.2e smooth %0.2e"%(mse,smooth))
         #print("Mse %0.2e k  %0.2e"%(mse,high_k))
-        #print("Mse %0.2e tv  %0.2e"%(mse,tv))
-        return mse+tv+high_k
+        #print("Mse %0.2e sob  %0.2e"%(mse,sobolev))
+        #return mse+tv+high_k+sobolev
+        return mse#+sobolev
 
     def prim_forward(self, x):
 

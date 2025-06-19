@@ -30,7 +30,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=64
+testnum=70
 import mixednn 
 reload(mixednn)
 if 1:
@@ -55,7 +55,7 @@ if 1:
                      weight_decay=1e-4)
 if 1:
     subset = slice(0,1)
-    characteristic=True
+    characteristic=False
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
                               characteristic=characteristic)
 if 1:
