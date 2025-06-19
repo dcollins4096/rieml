@@ -30,13 +30,13 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=63
+testnum=64
 import mixednn 
 reload(mixednn)
 if 1:
 
-    hidden_dims=512,512
-    conv_channels=64
+    #hidden_dims=512,512
+    #conv_channels=64
     hidden_dims = 128, 128
     conv_channels = 32
     model = mixednn.HybridShockTubeNN(hidden_dims=hidden_dims, conv_channels=conv_channels)
@@ -58,6 +58,6 @@ if 1:
     characteristic=True
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
                               characteristic=characteristic)
-if 0:
+if 1:
     zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
                               characteristic=characteristic)
