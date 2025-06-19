@@ -34,6 +34,11 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     losses=[]
     a = torch.arange(len(data))
     N = len(data)
+    seed = 8675309
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
     for epoch in range(epochs):
         subset = torch.tensor(random.sample(list(a),batch_size))
         #random.shuffle(a)
