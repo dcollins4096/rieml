@@ -30,7 +30,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=119
+testnum=135
 new_model = 1
 train_model = 1
 import mixednn 
@@ -54,16 +54,23 @@ if train_model:
     epoch = 5000
     batch_size=3
     lr = 1e-3
-    rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
+    losses=rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
-    subset = slice(0,5)
+    las = torch.argsort(losses)
+    subset = list(range(5)) 
     characteristic=False
     delta = True
+    zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
+                              characteristic=characteristic,delta=delta)
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
+                              characteristic=characteristic,delta=delta)
+    subset = las[:5]
+    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_best'%testnum, 
+                              characteristic=characteristic,delta=delta)
+    subset = las[-5:]
+    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_worst'%testnum, 
                               characteristic=characteristic,delta=delta)
 if 0:
     zzz=rieML_model.error_plot(train[subset], train_parameters[subset], model, fname='%d_train'%testnum)
-    zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
-                              characteristic=characteristic,delta=delta)
     zzz=rieML_model.error_plot(test[subset], test_parameters[subset], model, fname='%d_test'%testnum)

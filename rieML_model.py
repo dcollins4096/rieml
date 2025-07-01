@@ -29,7 +29,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     fptr.close()
     #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = 1e-2)
     optimizer = optim.Adam( model.parameters(), lr=lr)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=2)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -39,45 +39,55 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+
     for epoch in range(epochs):
         subset = torch.tensor(random.sample(list(a),batch_size))
-        #random.shuffle(a)
-        #subset = a[:batch_size]
         data_subset =  data[subset]
         param_subset = parameters[subset]
-        #print(subset)
-        #pdb.set_trace()
-
-        #local_losses=[]
         optimizer.zero_grad()
         output1=model(param_subset)
-        #output = output1.view(3,1000)
-        #loss = model.criterion(output1, datum[0], param)
-        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
-
-        #print(datum[0][0][:10])
-
+        loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
         loss.backward()
         optimizer.step()
-        #local_losses.append(loss.item())
-        #scheduler.step()
-        #losses += local_losses
+        print("Epoch %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
 
-        print("Epoch %d loss %0.2e"%(epoch,loss))
-        #fptr = open("output","r+")
-        #fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
-        #fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
-        #fptr.close()
-            #if n%10000 == 0 and n>1:
-            #    plt.clf()
-            #    plt.plot(losses)
-            #    plt.yscale('log')
-            #    plt.savefig("%s/loss_test_%d_%d"%(plot_dir,test_num,n))
-    #print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
+    models = [model(param.view(1,6)) for param in parameters]
+    losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
+    aas = torch.argsort(losses)[:50]
+    if 0:
+        for cur in range(10):
+            print('more',cur)
+            models = [model(param.view(1,6)) for param in parameters]
+            losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
+            aas = torch.argsort(losses)[:50]
+            for repeat in range(10):
+                for ind in range(len(aas)-batch_size):
+                    subset = torch.tensor(aas[ind:ind+batch_size])
+                    data_subset =  data[subset]
+                    param_subset = parameters[subset]
+                    optimizer.zero_grad()
+                    output1=model(param_subset)
+                    loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+                    loss.backward()
+                    optimizer.step()
+
+    if 0:
+        for epoch in range(epochs):
+            subset = torch.tensor(random.sample(list(a),batch_size))
+            data_subset =  data[subset]
+            param_subset = parameters[subset]
+            optimizer.zero_grad()
+            output1=model(param_subset)
+            loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+            loss.backward()
+            optimizer.step()
+            print("Epoch %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
+
     plt.clf()
-    plt.plot(losses)
+    plt.plot(losses[aas])
     plt.yscale('log')
     plt.savefig("%s/loss_test_%d_%d"%(plot_dir,test_num,n))
+    return losses
 
 
 class MLP(nn.Module):
@@ -267,7 +277,7 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
         nd+=1
         z = model(param)
         z=z.view(3,1000)
-        loss = model.criterion(z, datum[1], initial=datum[0])
+        loss = model.criterion1(z, datum[1], initial=datum[0])
         print(loss)
         rows=1
         if characteristic:
