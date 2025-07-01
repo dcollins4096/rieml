@@ -4,6 +4,40 @@ import torch.nn.functional as F
 import rieML_model
 import ptoc
 
+gamma_default=1.6666666667
+def compute_flux(rho, u, p, gamma=gamma_default):
+    momentum = rho * u
+    energy = 0.5 * rho * u**2 + p / (gamma - 1)
+    return torch.stack([
+        momentum,
+        momentum * u + p,
+        u * (energy + p)
+    ], dim=1)  # shape (batch, 3, L)
+def average_flux_conservation_loss(U_init, U_final_pred, t_final=0.1, gamma=gamma_default):
+    """
+    Enforce U_final = U_init - 0.5 * t_final * (∂F_init/∂x + ∂F_final/∂x)
+    """
+    # U_init and U_final_pred: (batch, 3, L)
+    rho_i, p_i, u_i = U_init[:, 0], U_init[:, 1], U_init[:, 2]
+    rho_f, p_f, u_f = U_final_pred[:, 0], U_final_pred[:, 1], U_final_pred[:, 2]
+
+    F_i = compute_flux(rho_i, u_i, p_i, gamma)
+    F_f = compute_flux(rho_f, u_f, p_f, gamma)
+
+    # Central differences for ∂F/∂x
+    dFdx_i = F_i[..., 2:] - F_i[..., :-2]
+    dFdx_f = F_f[..., 2:] - F_f[..., :-2]
+    dFdx_avg = 0.5 * (dFdx_i + dFdx_f)
+
+    # Adjust U_init and U_final to match shape
+    U_i_crop = U_init[..., 1:-1]
+    U_f_crop = U_final_pred[..., 1:-1]
+
+    # Residual from conservation
+    residual = U_f_crop - U_i_crop + t_final * dFdx_avg
+    return torch.mean(residual ** 2)
+
+
 class HybridShockTubeNN(nn.Module):
     def __init__(self, output_length=1000, hidden_dims=(128, 128), conv_channels=32, characteristic=False):
         super().__init__()
@@ -82,14 +116,17 @@ class HybridShockTubeNN(nn.Module):
     def maxdiff(self,target,guess):
         return ((target-guess)**2).max()
 
-    def criterion(self,target,guess):
+    def criterion(self,target,guess, initial=None):
         mse_weight, sobolev_weight = self.convex_combination()
         mse = mse_weight*self.mse(target,guess)
         #sobolev = self.mse(dx_target,dx_guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
         sobolev = sobolev_weight*self.sobolev(target,guess)
         md = self.maxdiff(target,guess)
-        return sobolev+mse+0.1*md
+        phys = average_flux_conservation_loss(initial, guess)
+        #return sobolev+mse+0.1*md+0.1*phys
+        #print('mse %0.2e phys %0.2e'%(mse,phys))
+        return mse+phys
 
 
         #high_k_weight = torch.exp(self.log_high_k_weight)

@@ -57,7 +57,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             output1=model(param)
             #output = output1.view(3,1000)
             #loss = model.criterion(output1, datum[0], param)
-            loss = model.criterion(output1, datum[1])
+            loss = model.criterion(output1, datum[1], initial=datum[0])
             #print(datum[0][0][:10])
 
             loss.backward()
@@ -231,7 +231,7 @@ def error_plot(datalist, parameters,model, fname="plot"):
         nd+=1
         #pdb.set_trace()
         z = model(param)
-        loss = model.criterion(z, datum[1])
+        loss = model.criterion(z, datum[1], initial=datum[0])
         print(loss)
         rows=3
         fig,axes=plt.subplots(rows,3,figsize=(12,4))
@@ -268,7 +268,7 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
         nd+=1
         #pdb.set_trace()
         z = model(param)
-        loss = model.criterion(z, datum[1])
+        loss = model.criterion(z, datum[1], initial=datum[0])
         print(loss)
         rows=1
         if characteristic:
