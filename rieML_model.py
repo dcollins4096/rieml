@@ -48,34 +48,32 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         #print(subset)
         #pdb.set_trace()
 
-        local_losses=[]
-        for datum, param in zip(data_subset, param_subset):
-        #for datum, param in zip(data, parameters):
-            #pdb.set_trace()
-            n+=1
-            optimizer.zero_grad()
-            output1=model(param)
-            #output = output1.view(3,1000)
-            #loss = model.criterion(output1, datum[0], param)
-            loss = model.criterion(output1, datum[1], initial=datum[0])
-            #print(datum[0][0][:10])
+        #local_losses=[]
+        optimizer.zero_grad()
+        output1=model(param_subset)
+        #output = output1.view(3,1000)
+        #loss = model.criterion(output1, datum[0], param)
+        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
 
-            loss.backward()
-            optimizer.step()
-            local_losses.append(loss.item())
+        #print(datum[0][0][:10])
+
+        loss.backward()
+        optimizer.step()
+        #local_losses.append(loss.item())
         scheduler.step()
-        losses += local_losses
+        #losses += local_losses
 
-        print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
-        fptr = open("output","r+")
-        fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
-        fptr.close()
+        print("Epoch %d loss %0.2e"%(epoch,loss))
+        #fptr = open("output","r+")
+        #fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
+        #fptr.write("Epoch %d set %d %0.2e\n"%(epoch, n,np.mean(local_losses)))
+        #fptr.close()
             #if n%10000 == 0 and n>1:
             #    plt.clf()
             #    plt.plot(losses)
             #    plt.yscale('log')
             #    plt.savefig("%s/loss_test_%d_%d"%(plot_dir,test_num,n))
-    print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
+    #print("Epoch %d set %d %0.2e"%(epoch, n,np.mean(local_losses)))
     plt.clf()
     plt.plot(losses)
     plt.yscale('log')
@@ -264,10 +262,11 @@ def error_plot(datalist, parameters,model, fname="plot"):
 
 def test_plot(datalist, parameters,model, fname="plot", characteristic=False, delta=False):
     nd=-1
-    for datum, param in zip(datalist,parameters):
+    for datum, param1 in zip(datalist,parameters):
+        param = param1.view(1,6)
         nd+=1
-        #pdb.set_trace()
         z = model(param)
+        z=z.view(3,1000)
         loss = model.criterion(z, datum[1], initial=datum[0])
         print(loss)
         rows=1
@@ -284,23 +283,27 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
             ax=axes
 
         fields = ['density','pressure','velocity']
+        ymax = [2,2,1.1]
         for nf,field in enumerate(fields):
             ax[nf].plot( datum[0][nf], c='k')
+            ymax[nf]=max([ymax[nf],datum[0][nf].max().item()])
             ax[nf].plot( datum[1][nf], c='k', linestyle='--')
+            ymax[nf]=max([ymax[nf],datum[1][nf].max().item()])
             zzz = z[nf].detach().numpy()
             if np.isnan(zzz).sum() > 0:
                 print("Is nan", np.isnan(zzz).sum(), nd, nf)
             ax[nf].set(title='error %0.2e'%loss)
             ax[nf].plot( zzz, c='r')
+            ymax[nf]=max([ymax[nf],z.max().item()])
             ax[nf].set(ylabel=field)
             if delta:
                 ddd = datum[0][nf] - zzz
                 axb[nf].plot(ddd**2)
                 errp=(ddd**2).mean()
                 axb[nf].set(title="%0.2e"%errp)
-        ax[0].set(ylim=[0,2])
-        ax[1].set(ylim=[0,2])
-        ax[2].set(ylim=[-1.1,1.1])
+        ax[0].set(ylim=[0,ymax[0]])
+        ax[1].set(ylim=[0,ymax[1]])
+        ax[2].set(ylim=[-1.1,ymax[2]])
         if characteristic:
             ICchar = ptoc.primitive_to_characteristic(datum[0])
             REchar = ptoc.primitive_to_characteristic(datum[1])

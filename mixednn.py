@@ -91,7 +91,6 @@ class HybridShockTubeNN(nn.Module):
         #else:
         #    self.forward=self.prim_forward
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
-        self.forward = self.prim_forward
 
         self.mse=nn.MSELoss()
         self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
@@ -143,24 +142,24 @@ class HybridShockTubeNN(nn.Module):
         #return mse+tv+high_k+sobolev
         #return mse#+sobolev
 
-    def prim_forward(self, x):
-
+    def forward(self, x):
+        batch_size=x.shape[0]
         # FC1 to expand global features into spatial representation
         x = self.fc1(x)  # (batch_size, 3*output_length)
         x = self.relu1(x)
-        x = x.view(1, 3, self.output_length)  # shape (B, 3, L)
+        x = x.view(batch_size, 3, self.output_length)  # shape (B, 3, L)
 
         # Conv block 1: local patterns
         x = x + self.conv1(x)  # Residual connection
 
         # FC2 block: reprocess globally
-        x_flat = x.view( -1)
+        x_flat = x.view(batch_size, -1)
         x_flat = self.fc2(x_flat)
-        x = x_flat.view(1,3, self.output_length)
+        x = x_flat.view(batch_size,3, self.output_length)
 
         # Conv block 2: refine locally again
         x = x + self.conv2(x)
-        x = x.view(3,self.output_length)
+        #x = x.view(3,self.output_length)
 
         return x  # shape (B, 3, output_length)
 
