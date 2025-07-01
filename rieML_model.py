@@ -27,9 +27,9 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     #optimizer = optim.SGD(model.parameters(), lr=lr)
     fptr = open('output','w')
     fptr.close()
-    #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = weight_decay)
+    #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = 1e-2)
     optimizer = optim.Adam( model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=100, gamma=0.5)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -60,7 +60,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         loss.backward()
         optimizer.step()
         #local_losses.append(loss.item())
-        scheduler.step()
+        #scheduler.step()
         #losses += local_losses
 
         print("Epoch %d loss %0.2e"%(epoch,loss))
@@ -297,7 +297,7 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
             ymax[nf]=max([ymax[nf],z.max().item()])
             ax[nf].set(ylabel=field)
             if delta:
-                ddd = datum[0][nf] - zzz
+                ddd = datum[1][nf] - zzz
                 axb[nf].plot(ddd**2)
                 errp=(ddd**2).mean()
                 axb[nf].set(title="%0.2e"%errp)

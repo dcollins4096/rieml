@@ -120,12 +120,12 @@ class HybridShockTubeNN(nn.Module):
         mse = mse_weight*self.mse(target,guess)
         #sobolev = self.mse(dx_target,dx_guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
-        sobolev = sobolev_weight*self.sobolev(target,guess)
-        md = self.maxdiff(target,guess)
-        phys = average_flux_conservation_loss(initial, guess)
+        #sobolev = sobolev_weight*self.sobolev(target,guess)
+        #md = self.maxdiff(target,guess)
+        #phys = average_flux_conservation_loss(initial, guess)
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
-        return mse+phys
+        return mse
 
 
         #high_k_weight = torch.exp(self.log_high_k_weight)
