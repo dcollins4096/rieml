@@ -225,8 +225,44 @@ class SixToThreeChannelNN(nn.Module):
 
         x = x.view( 3, self.output_length)
         return x
+def error_plot(datalist, parameters,model, fname="plot"):
+    nd=-1
+    for datum, param in zip(datalist,parameters):
+        nd+=1
+        #pdb.set_trace()
+        z = model(param)
+        loss = model.criterion(z, datum[1])
+        print(loss)
+        rows=3
+        fig,axes=plt.subplots(rows,3,figsize=(12,4))
+        axa=axes[0]
+        axb=axes[1]
+        axc=axes[2]
 
-def test_plot(datalist, parameters,model, fname="plot", characteristic=False):
+        fields = ['density','pressure','velocity']
+        dat = datum[1]
+        dx_target,dx_guess = model.sobolev_derivatives(dat, z) #target guess
+        dsob = (dx_target-dx_guess)**2
+
+        for nf,field in enumerate(fields):
+            mse = (z[nf]- dat[nf])**2
+            mse = mse.detach().numpy()
+            mse_weight, sobolev_weight = model.convex_combination()
+            sob = model.sobolev(dat,z)
+            
+            axa[nf].plot( dx_guess[nf].detach().numpy(), c='g', label='dx guess %0.2e'%sob)
+            axa[nf].plot( dx_target[nf].detach().numpy()[10:], c='r', label='dx target %0.2e'%sobolev_weight)
+            axb[nf].plot( mse, c='k', label='mse %0.2e'%mse.mean())
+            axc[nf].plot(dsob[nf].detach().numpy(),label='sob %0.2e'%sob.mean())
+            #pdb.set_trace()
+            axa[nf].legend(loc=0)
+            axb[nf].legend(loc=0)
+            axc[nf].legend(loc=0)
+        fig.tight_layout()
+        fig.savefig("%s/error_%s_%d"%(plot_dir,fname,nd))
+        plt.close(fig)
+
+def test_plot(datalist, parameters,model, fname="plot", characteristic=False, delta=False):
     nd=-1
     for datum, param in zip(datalist,parameters):
         nd+=1
@@ -237,10 +273,12 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False):
         rows=1
         if characteristic:
             rows=2
+        if delta:
+            rows += 1
 
 
         fig,axes=plt.subplots(rows,3,figsize=(12,4))
-        if characteristic:
+        if characteristic or delta:
             ax,axb=axes
         else:
             ax=axes
@@ -250,10 +288,16 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False):
             ax[nf].plot( datum[0][nf], c='k')
             ax[nf].plot( datum[1][nf], c='k', linestyle='--')
             zzz = z[nf].detach().numpy()
-            print("Is nan", np.isnan(zzz).sum(), nd, nf)
+            if np.isnan(zzz).sum() > 0:
+                print("Is nan", np.isnan(zzz).sum(), nd, nf)
             ax[nf].set(title='error %0.2e'%loss)
             ax[nf].plot( zzz, c='r')
             ax[nf].set(ylabel=field)
+            if delta:
+                ddd = datum[0][nf] - zzz
+                axb[nf].plot(ddd**2)
+                errp=(ddd**2).mean()
+                axb[nf].set(title="%0.2e"%errp)
         ax[0].set(ylim=[0,2])
         ax[1].set(ylim=[0,2])
         ax[2].set(ylim=[-1.1,1.1])

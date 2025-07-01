@@ -60,17 +60,37 @@ class HybridShockTubeNN(nn.Module):
         self.forward = self.prim_forward
 
         self.mse=nn.MSELoss()
-        #self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
         #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
         #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
 
+    def sobolev_derivatives(self,target,guess):
+        dx_target = target[:,1:]-target[:,:-1]
+        dx_guess  = guess[:,1:]-guess[:,:-1]
+        return dx_target, dx_guess
+    def sobolev(self,target,guess):
+        dx_target,dx_guess = self.sobolev_derivatives(target,guess)
+        sobolev = self.mse(dx_target,dx_guess)
+        return sobolev
+    def convex_combination(self):
+        theta = self.log_derivative_weight
+        mse_weight = torch.cos(theta)
+        sobolev_weight = 1-torch.cos(theta)
+        mse_weight, sobolev_weight = 0.8,0.1
+        return mse_weight, sobolev_weight
+
+    def maxdiff(self,target,guess):
+        return ((target-guess)**2).max()
+
     def criterion(self,target,guess):
-        mse = self.mse(target,guess)
-        #dx_target = target[:,1:]-target[:,:-1]
-        #dx_guess  = guess[:,1:]-guess[:,:-1]
-        #sobolev_weight = torch.exp(self.log_derivative_weight)
-        #sobolev = sobolev_weight*self.mse(dx_target,dx_guess)
+        mse_weight, sobolev_weight = self.convex_combination()
+        mse = mse_weight*self.mse(target,guess)
         #sobolev = self.mse(dx_target,dx_guess)
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
+        sobolev = sobolev_weight*self.sobolev(target,guess)
+        md = self.maxdiff(target,guess)
+        return sobolev+mse+0.1*md
+
 
         #high_k_weight = torch.exp(self.log_high_k_weight)
         #high_k = high_k_weight*rieML_model.high_frequency_penalty(guess)
@@ -84,7 +104,7 @@ class HybridShockTubeNN(nn.Module):
         #print("Mse %0.2e k  %0.2e"%(mse,high_k))
         #print("Mse %0.2e sob  %0.2e"%(mse,sobolev))
         #return mse+tv+high_k+sobolev
-        return mse#+sobolev
+        #return mse#+sobolev
 
     def prim_forward(self, x):
 

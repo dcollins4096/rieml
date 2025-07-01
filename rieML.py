@@ -30,10 +30,13 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=70
+testnum=95
+new_model = 0
+train_model = 0
 import mixednn 
+
 reload(mixednn)
-if 1:
+if new_model:
 
     #hidden_dims=512,512
     #conv_channels=64
@@ -47,17 +50,21 @@ if 0:
     conv_channels=6
     model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims, conv_channels=conv_channels)
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
-if 1:
-    epoch = 300
-    batch_size=50
+if train_model:
+    epoch = 1000
+    batch_size=100
     lr = 1e-3
     rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
-    subset = slice(0,1)
+    subset = slice(0,5)
     characteristic=False
-    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
-                              characteristic=characteristic)
+    delta = True
+    #zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
+    #                          characteristic=characteristic,delta=delta)
+    zzz=rieML_model.error_plot(train[subset], train_parameters[subset], model, fname='%d_train'%testnum)
 if 1:
+    pass
     zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
-                              characteristic=characteristic)
+                              characteristic=characteristic,delta=delta)
+    zzz=rieML_model.error_plot(test[subset], test_parameters[subset], model, fname='%d_test'%testnum)
