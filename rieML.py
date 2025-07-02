@@ -30,7 +30,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=135
+testnum=148
 new_model = 1
 train_model = 1
 import mixednn 
@@ -51,7 +51,7 @@ if 0:
     model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims, conv_channels=conv_channels)
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
 if train_model:
-    epoch = 5000
+    epoch = 10000
     batch_size=3
     lr = 1e-3
     losses=rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 

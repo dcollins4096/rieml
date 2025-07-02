@@ -54,12 +54,28 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     models = [model(param.view(1,6)) for param in parameters]
     losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
     aas = torch.argsort(losses)[:50]
-    if 0:
-        for cur in range(10):
+    if 1:
+        for cur in range(50):
             print('more',cur)
             models = [model(param.view(1,6)) for param in parameters]
             losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
-            aas = torch.argsort(losses)[:50]
+            aas = torch.argsort(losses)[:100]
+            for repeat in range(10):
+                for ind in range(len(aas)-batch_size):
+                    subset = torch.tensor(aas[ind:ind+batch_size])
+                    data_subset =  data[subset]
+                    param_subset = parameters[subset]
+                    optimizer.zero_grad()
+                    output1=model(param_subset)
+                    loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+                    loss.backward()
+                    optimizer.step()
+    if 1:
+        for cur in range(50):
+            print('more',cur)
+            models = [model(param.view(1,6)) for param in parameters]
+            losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
+            aas = torch.argsort(losses)[-50:]
             for repeat in range(10):
                 for ind in range(len(aas)-batch_size):
                     subset = torch.tensor(aas[ind:ind+batch_size])
@@ -71,8 +87,8 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
                     loss.backward()
                     optimizer.step()
 
-    if 0:
-        for epoch in range(epochs):
+    if 1:
+        for epoch in range(epochs//2):
             subset = torch.tensor(random.sample(list(a),batch_size))
             data_subset =  data[subset]
             param_subset = parameters[subset]
@@ -81,7 +97,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
             loss.backward()
             optimizer.step()
-            print("Epoch %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
+            print("Epoch2 %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
 
     plt.clf()
     plt.plot(losses[aas])
