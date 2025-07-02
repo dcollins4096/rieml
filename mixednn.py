@@ -5,6 +5,7 @@ import rieML_model
 import ptoc
 import pdb
 
+
 gamma_default=1.6666666667
 def compute_flux(rho, u, p, gamma=gamma_default):
     momentum = rho * u
@@ -39,7 +40,10 @@ def average_flux_conservation_loss(U_init, U_final_pred, t_final=0.1, gamma=gamm
     #print("WTF",residual.requires_grad)
     #pdb.set_trace()
     return torch.mean(residual ** 2)
-
+def init_weights_constant(m):
+    if isinstance(m, nn.Linear):
+        #nn.init.constant_(m.weight, 0.5)
+        nn.init.constant_(m.bias, 0.1)
 class SelfAttention1D(nn.Module):
     def __init__(self, channels, length):
         super().__init__()
@@ -107,6 +111,20 @@ class HybridShockTubeNN(nn.Module):
             nn.ReLU(),
             nn.Conv1d(conv_channels, 3, kernel_size=kern, padding=padding, dilation=dil)
         )
+        if 1:
+            self.conv3 = nn.Sequential(
+                nn.Conv1d(3, conv_channels, kernel_size=kern, padding=padding, dilation=dil),
+                nn.ReLU(),
+                nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern, padding=padding, dilation=dil),
+                nn.ReLU(),
+                nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern, padding=padding, dilation=dil),
+                nn.ReLU(),
+                nn.Conv1d(conv_channels, 3, kernel_size=kern, padding=padding, dilation=dil)
+            )
+        self.conv1.apply(init_weights_constant)
+        self.conv2.apply(init_weights_constant)
+        self.conv3.apply(init_weights_constant)
+        self.fc2.apply(init_weights_constant)
         #if characteristic:
         #    self.forward=self.char_forward
         #else:
@@ -125,12 +143,35 @@ class HybridShockTubeNN(nn.Module):
         #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
         embed_dim=output_length
         num_heads = 4
+        self.hl = nn.HuberLoss(delta=0.2)
+        self.l1 = nn.L1Loss()
 
         #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
         #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
         #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
 
 
+    def fft_penalty(self,target,guess, cutoff_ratio=0.3):
+        """
+        Penalize high-frequency components in the output.
+        
+        Args:
+            output: (batch_size, channels, length)
+            cutoff_ratio: fraction of frequencies to treat as low-frequency (0.3 means first 30%)
+            
+        Returns:
+            scalar penalty term
+        """
+
+        # FFT along spatial dimension
+        fft_t = torch.fft.rfft(target, dim=1)
+        fft_g = torch.fft.rfft(guess, dim=1)
+        
+        # Power spectrum
+        power_t = torch.abs(fft_t) ** 2
+        power_g = torch.abs(fft_g) ** 2
+        
+        return self.l1(power_t,power_g)
 
     def sobolev_derivatives(self,target,guess):
         dx_target = target[:,1:]-target[:,:-1]
@@ -138,7 +179,8 @@ class HybridShockTubeNN(nn.Module):
         return dx_target, dx_guess
     def sobolev(self,target,guess):
         dx_target,dx_guess = self.sobolev_derivatives(target,guess)
-        sobolev = self.mse(dx_target,dx_guess)
+        #sobolev = self.mse(dx_target,dx_guess)
+        sobolev = self.l1(dx_target,dx_guess)
         return sobolev
     def convex_combination(self):
         theta = self.log_derivative_weight
@@ -151,27 +193,35 @@ class HybridShockTubeNN(nn.Module):
         return ((target-guess)**2).max()
 
     def criterion1(self,guess,target, initial=None):
-        mse_weight, sobolev_weight = self.convex_combination()
-        mse = mse_weight*self.mse(target,guess)
-        #sobolev = self.mse(dx_target,dx_guess)
+        #mse_weight, sobolev_weight = self.convex_combination()
+        #mse_weight=1
+        #mse = mse_weight*self.mse(target,guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
-        #sobolev = sobolev_weight*self.sobolev(target,guess)
+        sobolev_weight=1
+        sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
         #phys = average_flux_conservation_loss(initial, guess)
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
-        return mse
+        #hl = self.hl(guess,target)
+        #tv = torch.abs(guess[1:]-guess[:-1]).mean()
+        L1 = self.l1(target,guess)
+        #high_k = self.fft_penalty(target,guess)
+        return L1+sobolev#high_k
     def criterion2(self,guess,target, initial=None):
         mse_weight, sobolev_weight = self.convex_combination()
-        mse = self.mse(target,guess)
+        mse_weight = 1
+        mse = mse_weight*self.mse(target,guess)
         #sobolev = self.mse(dx_target,dx_guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
-        sobolev = self.sobolev(target,guess)
+        #sobolev = self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
-        phys = average_flux_conservation_loss(initial, guess)
+        #phys = average_flux_conservation_loss(initial, guess)
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
-        return mse+0.2*phys+0.2*sobolev
+        #tv = sobolev_weight*torch.abs(guess[1:]-guess[:-1]).mean()
+        #print("mse %0.2e tv %0.2e"%(mse,tv))
+        return mse
 
 
         #high_k_weight = torch.exp(self.log_high_k_weight)
@@ -213,6 +263,8 @@ class HybridShockTubeNN(nn.Module):
 
         # Conv block 2: refine locally again
         x = x + self.conv2(x)
+        #conv 3
+        x = x + self.conv3(x)
 
         #x = x.view(3,self.output_length)
 

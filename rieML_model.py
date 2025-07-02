@@ -29,7 +29,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     fptr.close()
     #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = 1e-2)
     optimizer = optim.Adam( model.parameters(), lr=lr)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1000, gamma=2)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.5)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -49,17 +49,18 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
         loss.backward()
         optimizer.step()
+        #scheduler.step()
         print("Epoch %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
 
     models = [model(param.view(1,6)) for param in parameters]
     losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
     aas = torch.argsort(losses)[:50]
-    if 1:
-        for cur in range(50):
+    if 0:
+        for cur in range(100):
             print('more',cur)
             models = [model(param.view(1,6)) for param in parameters]
             losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
-            aas = torch.argsort(losses)[:100]
+            aas = torch.argsort(losses)[:300]
             for repeat in range(10):
                 for ind in range(len(aas)-batch_size):
                     subset = torch.tensor(aas[ind:ind+batch_size])
@@ -70,12 +71,12 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
                     loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
                     loss.backward()
                     optimizer.step()
-    if 1:
+    if 0:
         for cur in range(50):
             print('more',cur)
             models = [model(param.view(1,6)) for param in parameters]
             losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])
-            aas = torch.argsort(losses)[-50:]
+            aas = torch.argsort(losses)[-300:]
             for repeat in range(10):
                 for ind in range(len(aas)-batch_size):
                     subset = torch.tensor(aas[ind:ind+batch_size])
@@ -87,14 +88,14 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
                     loss.backward()
                     optimizer.step()
 
-    if 1:
-        for epoch in range(epochs//2):
+    if 0:
+        for epoch in range(epochs):
             subset = torch.tensor(random.sample(list(a),batch_size))
             data_subset =  data[subset]
             param_subset = parameters[subset]
             optimizer.zero_grad()
             output1=model(param_subset)
-            loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+            loss = model.criterion2(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
             loss.backward()
             optimizer.step()
             print("Epoch2 %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
@@ -249,6 +250,34 @@ class SixToThreeChannelNN(nn.Module):
 
         x = x.view( 3, self.output_length)
         return x
+def ft_plot(datalist, parameters,model, fname="plot"):
+    nd=-1
+    for datum, param1 in zip(datalist,parameters):
+        param = param1.view(1,6)
+        nd+=1
+        #pdb.set_trace()
+        z = model(param)[0]
+        rows=1
+        fig,axes=plt.subplots(rows,3,figsize=(12,4))
+        axa=axes#[0]
+        #axb=axes[1]
+        #axc=axes[2]
+
+        fields = ['density','pressure','velocity']
+
+        for nf,field in enumerate(fields):
+            q = z[nf].detach().numpy()
+            ft_z = np.fft.rfft(q)
+            ft_d = np.fft.rfft(datum[1][nf])
+            p_z = np.abs(ft_z)**2
+            p_d = np.abs(ft_d)**2
+            axa[nf].plot(p_d,c='k')
+            axa[nf].plot(p_z,c='r')
+            axa[nf].set(xscale='log',yscale='log')
+            
+        fig.tight_layout()
+        fig.savefig("%s/ft_%s_%d"%(plot_dir,fname,nd))
+        plt.close(fig)
 def error_plot(datalist, parameters,model, fname="plot"):
     nd=-1
     for datum, param in zip(datalist,parameters):
