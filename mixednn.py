@@ -219,20 +219,20 @@ class HybridShockTubeNN(nn.Module):
         #mse_weight=1
         #mse = mse_weight*self.mse(target,guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
-        sobolev_weight=1
-        sobolev = sobolev_weight*self.sobolev(target,guess)
+        #sobolev_weight=1
+        #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
         #phys = average_flux_conservation_loss(initial, guess)
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
-        tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        L1 = self.l1(target,guess)
+        #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
+        #L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
-        if torch.isnan(tv):
-            pdb.set_trace()
-        return L1#+sobolev+0.1*tv
+        #if torch.isnan(tv):
+        #    pdb.set_trace()
+        return L1#+high_k#+sobolev+0.1*tv
     def criterion2(self,guess,target, initial=None):
         mse_weight, sobolev_weight = self.convex_combination()
         mse_weight = 1

@@ -32,7 +32,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=174
+testnum=175
 new_model = 1
 train_model = 1
 import mixednn 
@@ -42,10 +42,10 @@ if new_model:
 
     #hidden_dims=512,512
     #conv_channels=64
-    #hidden_dims = 1024,
+    hidden_dims = 128   ,
     #hidden_dims = 128,256,512,256,128
     #hidden_dims = 256,512,1024,512,256
-    hidden_dims = 3000,
+    #hidden_dims = 6000,
     conv_channels = 32
     model = mixednn.HybridShockTubeNN(hidden_dims=hidden_dims, conv_channels=conv_channels)
 

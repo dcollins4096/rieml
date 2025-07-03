@@ -30,7 +30,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     fptr.close()
     #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = 1e-2)
     optimizer = optim.Adam( model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10000, gamma=0.5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25000, gamma=0.1)
     n=-1
     losses=[]
     a = torch.arange(len(data))
@@ -53,7 +53,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         loss = model.criterion1(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
         loss.backward()
         optimizer.step()
-        #scheduler.step()
+        scheduler.step()
         tnow = time.time()
         tel = tnow-t0
         loss_batch.append(loss.item())
