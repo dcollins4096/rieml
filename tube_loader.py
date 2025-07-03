@@ -5,6 +5,7 @@ import yt
 import numpy as np
 import pdb
 
+
 def get_parameters(fname):
     fptr = open(fname,'r')
     lines = fptr.readlines()
@@ -88,10 +89,33 @@ def read_one(fname):
     tubes = fptr['tubes'][()]
     fptr.close()
     return tubes
-def read_one_parameters(fname):
+def read_all_parameters(fname):
     fptr=h5py.File(fname,'r')
     tubes = fptr['tubes'][()]
     parameters = fptr['parameters'][()].astype('float')
 
     fptr.close()
     return tubes, parameters
+
+def read_good_parameters(fname):
+    tubes,parameters = read_all_parameters(fname)
+    tubes_out=[]
+    param_out=[]
+    for datum, param in zip(tubes,parameters):
+        f = datum[1]
+        keep=True
+        for nf,field in enumerate(['density','pressure','velocity']):
+            #print('L',f[nf][0:5], param[2*nf])
+            if (np.abs(f[nf][0:5]-param[2*nf])>1e-5).any():
+                keep=False
+            #print('R',f[nf][-5:], param[2*nf+1])
+            if (np.abs(f[nf][-5:]-param[2*nf+1])>1e-5).any():
+                keep=False
+        if keep:
+            tubes_out.append(datum)
+            param_out.append(param)
+    #print("Start %d end %d"%(len(tubes), len(tubes_out)))
+    return tubes_out,param_out
+
+
+

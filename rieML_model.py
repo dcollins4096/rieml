@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random
 import ptoc
+import time
 from importlib import reload
 reload(ptoc)
 plot_dir = "%s/plots"%os.environ['HOME']
@@ -40,6 +41,9 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     torch.manual_seed(seed)
 
 
+    t0 = time.time()
+    loss_batch=[]
+    minlist=[];meanlist=[];maxlist=[];stdlist=[]
     for epoch in range(epochs):
         subset = torch.tensor(random.sample(list(a),batch_size))
         data_subset =  data[subset]
@@ -50,7 +54,32 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         loss.backward()
         optimizer.step()
         #scheduler.step()
-        print("Epoch %d loss %0.2e LR %0.2e"%(epoch,loss, optimizer.param_groups[0]['lr']))
+        tnow = time.time()
+        tel = tnow-t0
+        loss_batch.append(loss.item())
+        if epoch>0 and epoch%10==0:
+            time_per_epoch = tel/epoch
+            epoch_remaining = epochs-epoch
+            time_remaining = time_per_epoch*epoch_remaining
+            mean = np.mean(loss_batch)
+            std = np.std(loss_batch)
+            mmin = min(loss_batch)
+            mmax = max(loss_batch)
+            minlist.append(mmin)
+            maxlist.append(mmax)
+            meanlist.append(mean)
+            stdlist.append(std)
+            print("Epoch %d loss %0.2e LR %0.2e time left %0.3f loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+                  (epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+            loss_batch=[]
+    plt.clf()
+    plt.plot(meanlist,c='k')
+    plt.plot(np.array(meanlist)+np.array(stdlist),c='b')
+    plt.plot(np.array(meanlist)-np.array(stdlist),c='b')
+    plt.plot(minlist,c='k')
+    plt.plot(maxlist,c='k')
+    plt.yscale('log')
+    plt.savefig('%s/errortime_test%d'%(plot_dir,test_num))
 
     models = [model(param.view(1,6)) for param in parameters]
     losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models,data)])

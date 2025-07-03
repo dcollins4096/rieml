@@ -96,11 +96,33 @@ class HybridShockTubeNN(nn.Module):
         )
 
         # FC block 2: merge spatial info
-        self.fc2 = nn.Sequential(
-            nn.Linear(3 * output_length, hidden_dims[0]),
-            nn.ReLU(),
-            nn.Linear(hidden_dims[0], 3 * output_length)
-        )
+        if 0:
+            self.fc2 = nn.Sequential(
+                nn.Linear(3 * output_length, hidden_dims[0]),
+                nn.ReLU(),
+                nn.Linear(hidden_dims[0], 3 * output_length)
+            )
+        if 0:
+            in_dim = 3*output_length
+            out_dim = 3*output_length
+            layers=[]
+            dims = [in_dim] + list(hidden_dims) + [out_dim]
+            for i in range(len(dims)-1):
+                layers.append(nn.Linear(dims[i], dims[i+1]))
+                if i < len(dims) - 2:
+                    layers.append(nn.ReLU())
+                    print('relu')
+            self.fc2 = nn.Sequential(*layers)
+        if 1:
+            in_dim = 3*output_length
+            out_dim = 3*output_length
+            layers=[]
+            dims = [in_dim] + list(hidden_dims) + [out_dim]
+            for i in range(len(dims)-1):
+                layers.append(nn.Linear(dims[i], dims[i+1]))
+                if i < len(dims) - 2:
+                    layers.append(nn.ReLU())
+            self.fc2 = nn.Sequential(*layers)
 
         # Conv block 2
         dil = 1
@@ -204,10 +226,13 @@ class HybridShockTubeNN(nn.Module):
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
-        #tv = torch.abs(guess[1:]-guess[:-1]).mean()
+        tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
         L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
-        return L1+sobolev#high_k
+        #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
+        if torch.isnan(tv):
+            pdb.set_trace()
+        return L1#+sobolev+0.1*tv
     def criterion2(self,guess,target, initial=None):
         mse_weight, sobolev_weight = self.convex_combination()
         mse_weight = 1
