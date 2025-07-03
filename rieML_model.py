@@ -30,7 +30,12 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     fptr.close()
     #optimizer = optim.AdamW( model.parameters(), lr=lr, weight_decay = 1e-2)
     optimizer = optim.Adam( model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25000, gamma=0.1)
+    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25000, gamma=0.1)
+    scheduler = optim.lr_scheduler.MultiStepLR(
+        optimizer,
+            milestones=[25000, 35000,45000],  # change after N and N+M steps
+                gamma=0.1             # multiply by gamma each time
+                )
     n=-1
     losses=[]
     a = torch.arange(len(data))

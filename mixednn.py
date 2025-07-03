@@ -125,7 +125,7 @@ class HybridShockTubeNN(nn.Module):
             self.fc2 = nn.Sequential(*layers)
 
         # Conv block 2
-        dil = 1
+        dil = 2
         kern = 3
         padding = dil*(kern-1)//2
         self.conv2 = nn.Sequential(
@@ -227,7 +227,7 @@ class HybridShockTubeNN(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        #L1 = self.l1(target,guess)
+        L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
