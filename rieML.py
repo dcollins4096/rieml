@@ -32,7 +32,8 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=180
+testnum=181
+#181 more dil
 new_model = 1
 train_model = 1
 import mixednn 
