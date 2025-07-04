@@ -65,7 +65,12 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
         if epoch>0 and epoch%10==0:
             time_per_epoch = tel/epoch
             epoch_remaining = epochs-epoch
-            time_remaining = time_per_epoch*epoch_remaining
+            time_remaining_s = time_per_epoch*epoch_remaining
+            hrs = time_remaining_s//3600
+            minute = (time_remaining_s-hrs*3600)//60
+            sec = (time_remaining_s - hrs*3600-minute*60)#//60
+            time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+
             mean = np.mean(loss_batch)
             std = np.std(loss_batch)
             mmin = min(loss_batch)
@@ -74,9 +79,11 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             maxlist.append(mmax)
             meanlist.append(mean)
             stdlist.append(std)
-            print("Epoch %d loss %0.2e LR %0.2e time left %0.3f loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+            print(time_remaining)
+            print("Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
                   (epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
             loss_batch=[]
+    print("Run time", tel)
     plt.clf()
     plt.plot(meanlist,c='k')
     plt.plot(np.array(meanlist)+np.array(stdlist),c='b')
