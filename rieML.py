@@ -32,8 +32,9 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=181
+testnum=182
 #181 more dil
+#182 LR(t=0)=1e-4
 new_model = 1
 train_model = 1
 import mixednn 
@@ -59,7 +60,7 @@ if 0:
 if train_model:
     epoch = 50000
     batch_size=3
-    lr = 1e-3
+    lr = 1e-4
     losses=rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:

@@ -79,7 +79,6 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
             maxlist.append(mmax)
             meanlist.append(mean)
             stdlist.append(std)
-            print(time_remaining)
             print("Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
                   (epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
             loss_batch=[]
