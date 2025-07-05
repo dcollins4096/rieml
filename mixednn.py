@@ -222,8 +222,8 @@ class HybridShockTubeNN(nn.Module):
 
     def criterion1(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
-        #mse_weight=1
-        #mse = mse_weight*self.mse(target,guess)
+        mse_weight=1
+        mse = mse_weight*self.mse(target,guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
@@ -238,7 +238,7 @@ class HybridShockTubeNN(nn.Module):
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
         #    pdb.set_trace()
-        return L1#+high_k#+sobolev+0.1*tv
+        return L1+mse#+sobolev#+0.1*tv#+high_k#
     def criterion2(self,guess,target, initial=None):
         mse_weight, sobolev_weight = self.convex_combination()
         mse_weight = 1

@@ -32,11 +32,12 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=182
+testnum=184
 #181 more dil
 #182 LR(t=0)=1e-4
-new_model = 1
-train_model = 1
+#183 sobolev
+new_model = 0
+train_model = 0
 import mixednn 
 
 reload(mixednn)
@@ -64,15 +65,21 @@ if train_model:
     losses=rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
 if 1:
+    models_test = [model(param.view(1,6)) for param in test_parameters]
+    test_losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models_test,test)])
+    test_arg = np.argsort(test_losses)
+    best_test = test_arg[:5]
+    worst_test = test_arg[-5:]
+if 1:
     las = torch.argsort(losses)
     subset = list(range(5)) 
     characteristic=False
     delta = True
-    zzz=rieML_model.ft_plot(test[subset], test_parameters[subset], model, fname="ft_%d"%testnum)
+    #zzz=rieML_model.ft_plot(test[subset], test_parameters[subset], model, fname="ft_%d"%testnum)
 if 1:
-    zzz=rieML_model.test_plot(test[subset], test_parameters[subset], model, fname="test_%d_test"%testnum,
+    zzz=rieML_model.test_plot(test[best_test], test_parameters[best_test], model, fname="test_%d_best_test"%testnum,
                               characteristic=characteristic,delta=delta)
-    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
+    zzz=rieML_model.test_plot(train[worst_test], train_parameters[worst_test], model, fname='test_%d_worst_test'%testnum, 
                               characteristic=characteristic,delta=delta)
     subset = las[:5]
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_best'%testnum, 
@@ -88,10 +95,14 @@ if 1:
     bmax = max([max(losses),1e-1])
     bins = np.geomspace(bmin,bmax,64)
     fig,ax=plt.subplots(1,1)
-    hist, bins, obj=ax.hist(losses.detach().numpy(), bins=bins)
-    bc = 0.5*(bins[1:]+bins[:-1])
-    Lmax = bc[np.argmax(hist)]
-    ax.set(xlabel='loss',xscale='log', title = "mean %0.2e peak %0.2e std %0.2e"%(losses.mean(), Lmax, losses.std()))
+    for nl in [0,1]:
+        lll = [losses, test_losses][nl]
+        hist, bins, obj=ax.hist(lll.detach().numpy(), bins=bins, histtype='step', 
+                                label= "mean %0.2e std %0.2e"%(lll.mean(), lll.std()))
+        bc = 0.5*(bins[1:]+bins[:-1])
+        #Lmax = bc[np.argmax(hist)]
+    ax.legend(loc=0)
+    ax.set(xlabel='loss',xscale='log')
     fig.savefig('%s/plots/errhist_test%d'%(os.environ['HOME'],testnum))
 if 1:
     nparam = sum(p.numel() for p in model.parameters() if p.requires_grad)
