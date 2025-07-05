@@ -32,11 +32,13 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=184
+testnum=186
 #181 more dil
-#182 LR(t=0)=1e-4 can't tell.
+#182 LR(t=0)=1e-4 better histogram.
 #183 sobolev not great
 #184 mse+l1
+#185 L1 + more layers
+#186 L1 + 1 more layer
 new_model = 1
 train_model = 1
 import mixednn 
