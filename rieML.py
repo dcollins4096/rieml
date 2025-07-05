@@ -34,10 +34,11 @@ if 1:
 #model = pyt.TwoU(base_filters=64)
 testnum=184
 #181 more dil
-#182 LR(t=0)=1e-4
-#183 sobolev
-new_model = 0
-train_model = 0
+#182 LR(t=0)=1e-4 can't tell.
+#183 sobolev not great
+#184 mse+l1
+new_model = 1
+train_model = 1
 import mixednn 
 
 reload(mixednn)
