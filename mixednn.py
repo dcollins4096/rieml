@@ -139,8 +139,8 @@ class HybridShockTubeNN(nn.Module):
         dil2 = 2
         kern2 = 3
         padding2 = dil2*(kern2-1)//2
-        dil3 = 3
-        kern3 = 5
+        dil3 = 5
+        kern3 = 7
         padding3 = dil3*(kern3-1)//2
         if 1:
             self.conv3 = nn.Sequential(
@@ -148,7 +148,9 @@ class HybridShockTubeNN(nn.Module):
                 nn.ReLU(),
                 nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU(),
-                nn.Conv1d(2*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+                nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+                nn.ReLU(),
+                nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
                 nn.ReLU(),
                 nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU(),

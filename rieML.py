@@ -32,13 +32,15 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=186
+testnum=188
 #181 more dil
 #182 LR(t=0)=1e-4 better histogram.
 #183 sobolev not great
 #184 mse+l1
-#185 L1 + more layers
+#185 L1 + 2 more layers
 #186 L1 + 1 more layer
+#187 L1 + 2 more layers + 512,1024,1024,512 not as good.
+#188 L1 + 2 more layers + 1024,1024, + dil 5 kern 7 on the inner layer.
 new_model = 1
 train_model = 1
 import mixednn 
@@ -82,7 +84,10 @@ if 1:
 if 1:
     zzz=rieML_model.test_plot(test[best_test], test_parameters[best_test], model, fname="test_%d_best_test"%testnum,
                               characteristic=characteristic,delta=delta)
-    zzz=rieML_model.test_plot(train[worst_test], train_parameters[worst_test], model, fname='test_%d_worst_test'%testnum, 
+    zzz=rieML_model.test_plot(test[worst_test], test_parameters[worst_test], model, fname='test_%d_worst_test'%testnum, 
+                              characteristic=characteristic,delta=delta)
+    subset = list(range(5)) 
+    zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_train'%testnum, 
                               characteristic=characteristic,delta=delta)
     subset = las[:5]
     zzz=rieML_model.test_plot(train[subset], train_parameters[subset], model, fname='test_%d_best'%testnum, 
@@ -92,7 +97,7 @@ if 1:
                               characteristic=characteristic,delta=delta)
 if 0:
     zzz=rieML_model.error_plot(train[subset], train_parameters[subset], model, fname='%d_train'%testnum)
-    zzz=rieML_model.error_plot(test[subset], test_parameters[subset], model, fname='%d_test'%testnum)
+    #zzz=rieML_model.error_plot(test[subset], test_parameters[subset], model, fname='%d_test'%testnum)
 if 1:
     bmin = min([min(losses),1e-4])
     bmax = max([max(losses),1e-1])
