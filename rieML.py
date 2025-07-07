@@ -33,7 +33,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=191
+testnum=192
 #181 more dil
 #182 LR(t=0)=1e-4 better histogram.
 #183 sobolev not great
@@ -44,7 +44,8 @@ testnum=191
 #188 L1 + 2 more layers + 1024,1024, + dil 5 kern 7 on the inner layer.
 #189 oops
 #190 185 with more div
-#191 speed up training.  4 conv layers, 1024 FC layer
+#191 speed up training.  4 conv layers, 1024 FC layer.  Fiducial.
+#192 speed up training.
 new_model = 1
 train_model = 1
 import mixednn 

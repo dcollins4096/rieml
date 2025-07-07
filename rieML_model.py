@@ -33,7 +33,7 @@ def train(model, data,parameters, epochs=1, lr=1e-3, batch_size=10, test_num=0, 
     #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25000, gamma=0.1)
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer,
-            milestones=[25000, 35000,45000],  # change after N and N+M steps
+            milestones=[10000, 20000],  # change after N and N+M steps
                 gamma=0.1             # multiply by gamma each time
                 )
     n=-1
