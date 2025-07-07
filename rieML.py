@@ -10,6 +10,7 @@ reload(pyt)
 import pdb
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 
 import tube_loader
@@ -32,7 +33,7 @@ if 1:
 ##model = pyt.Conv1DThreeChannel()
 #model = pyt.NikhilsUnet()
 #model = pyt.TwoU(base_filters=64)
-testnum=188
+testnum=189
 #181 more dil
 #182 LR(t=0)=1e-4 better histogram.
 #183 sobolev not great
@@ -41,6 +42,7 @@ testnum=188
 #186 L1 + 1 more layer
 #187 L1 + 2 more layers + 512,1024,1024,512 not as good.
 #188 L1 + 2 more layers + 1024,1024, + dil 5 kern 7 on the inner layer.
+#189 one more level with more dil
 new_model = 1
 train_model = 1
 import mixednn 
@@ -67,8 +69,15 @@ if train_model:
     epoch = 50000
     batch_size=3
     lr = 1e-4
+
+    t0 = time.time()
     losses=rieML_model.train(model,train,train_parameters,lr=lr, epochs = epoch, batch_size=batch_size, test_num=testnum, 
                      weight_decay=1e-4)
+    t1 = time.time()
+    hrs = t1//3600
+    minute = (t1-hrs*3600)//60
+    sec = (t1 - hrs*3600-minute*60)#//60
+    total_time="%02d:%02d:%02d"%(hrs,minute,sec)
 if 1:
     models_test = [model(param.view(1,6)) for param in test_parameters]
     test_losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models_test,test)])
@@ -114,4 +123,7 @@ if 1:
     fig.savefig('%s/plots/errhist_test%d'%(os.environ['HOME'],testnum))
 if 1:
     nparam = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Model test{testnum:d} with {nparam:,d} parameters")
+    print(f"Model test{testnum:d} with {nparam:,d} parameters elapsed {total_time:s}")
+    oname = "test%d.pth"%testnum
+    torch.save(model.state_dict(), oname)
+    print("model saved ",oname)

@@ -106,10 +106,10 @@ def read_good_parameters(fname):
         keep=True
         for nf,field in enumerate(['density','pressure','velocity']):
             #print('L',f[nf][0:5], param[2*nf])
-            if (np.abs(f[nf][0:5]-param[2*nf])>1e-5).any():
+            if (np.abs(f[nf][0:10]-param[2*nf])>1e-5).any():
                 keep=False
             #print('R',f[nf][-5:], param[2*nf+1])
-            if (np.abs(f[nf][-5:]-param[2*nf+1])>1e-5).any():
+            if (np.abs(f[nf][-10:]-param[2*nf+1])>1e-5).any():
                 keep=False
         if keep:
             tubes_out.append(datum)
@@ -117,5 +117,35 @@ def read_good_parameters(fname):
     #print("Start %d end %d"%(len(tubes), len(tubes_out)))
     return tubes_out,param_out
 
+def extract_validation(model, data, parameters):
+    tubes_out=[]
+    param_out=[]
+    ind_out = []
+    ind = list(range(len(data)))
+    n=-1
+    for datum, param in zip(data,parameters):
+        n+=1
+        f = datum[1]
+        keep=True
+        for nf,field in enumerate(['density','pressure','velocity']):
+            #print('L',f[nf][0:5], param[2*nf])
+            if (np.abs(f[nf][0:10]-param[2*nf])>1e-5).any():
+                keep=False
+            #print('R',f[nf][-5:], param[2*nf+1])
+            if (np.abs(f[nf][-10:]-param[2*nf+1])>1e-5).any():
+                keep=False
+        if keep:
+            tubes_out.append(datum)
+            param_out.append(param)
+            ind_out.append(ind[n])
+
+    models = [model(param.view(1,6)) for param in param_out]
+    losses = torch.tensor([model.criterion1(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(models_test,tubes_out)])
+    arg = np.argsort(losses)
+    N = len(ind_out)//2
+    ind_validate = ind_out[:5]+ ind_out[-5:] + ind_out[N:N+5]
+    return ind_validate
+
+    
 
 
