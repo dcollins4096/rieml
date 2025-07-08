@@ -16,7 +16,7 @@ reload(plot)
 
 
 import tube_loader
-import networks.net196 as net
+import networks.net289 as net
 reload(net)
 
 new_model = 1
