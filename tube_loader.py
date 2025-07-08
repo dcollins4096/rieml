@@ -106,10 +106,10 @@ def read_good_parameters(fname):
         keep=True
         for nf,field in enumerate(['density','pressure','velocity']):
             #print('L',f[nf][0:5], param[2*nf])
-            if (np.abs(f[nf][0:10]-param[2*nf])>1e-5).any():
+            if (np.abs(f[nf][0:20]-param[2*nf])>1e-5).any():
                 keep=False
             #print('R',f[nf][-5:], param[2*nf+1])
-            if (np.abs(f[nf][-10:]-param[2*nf+1])>1e-5).any():
+            if (np.abs(f[nf][-20:]-param[2*nf+1])>1e-5).any():
                 keep=False
         if keep:
             tubes_out.append(datum)

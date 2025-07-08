@@ -45,7 +45,7 @@ testnum=192
 #189 oops
 #190 185 with more div
 #191 speed up training.  4 conv layers, 1024 FC layer.  Fiducial.
-#192 speed up training.
+#192 speed up training. Only 30k steps, drop the rate earlier. OW same as 191.
 new_model = 1
 train_model = 1
 import mixednn 
@@ -69,7 +69,7 @@ if 0:
     model = rieML_model.SixToThreeChannelNN(1000, hidden_dims=hidden_dims, conv_channels=conv_channels)
     #model = rieML_model.SixToThreeB(1000, hidden_dims = (256,512,1024,512,256))
 if train_model:
-    epoch = 50000
+    epoch = 30000
     batch_size=3
     lr = 1e-4
 
