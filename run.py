@@ -16,10 +16,11 @@ reload(plot)
 
 
 import tube_loader
-import networks.net289 as net
+import networks.net300 as net
 reload(net)
 
 new_model = 1
+load_model = 0
 train_model = 1
 
 testnum=net.idd
@@ -43,6 +44,10 @@ if 1:
 if new_model:
 
     model = net.thisnet()
+
+if load_model:
+
+    model.load_state_dict(torch.load("models/test%d.pth"%net.idd))
 
 total_time='no'
 if train_model:
@@ -73,9 +78,9 @@ if 1:
     zzz=plot.test_plot(data['test'][args_test[-5:]], parameters['test'][args_test[-5:]], model, fname="test%d_test_worst"%testnum)
     zzz=plot.test_plot(data['train'][args_train[:5]], parameters['train'][args_train[:5]], model, fname="test%d_train_best"%testnum)
     zzz=plot.test_plot(data['train'][args_train[-5:]], parameters['train'][args_train[-5:]], model, fname="test%d_train_worst"%testnum)
-    zzz=plot.test_plot(data['validate'][args_validate], parameters['validate'][args_validate], model, fname="test%d_validate"%testnum)
+    zzz=plot.test_plot(data['validate'], parameters['validate'], model, fname="test%d_avalidate"%testnum)
 
-if 1:
+if not load_model:
     nparam = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Model test{testnum:d} with {nparam:,d} parameters elapsed {total_time:s}")
     oname = "models/test%d.pth"%testnum
