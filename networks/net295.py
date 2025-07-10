@@ -288,5 +288,5 @@ class main_net(nn.Module):
 
         #x = x.view(3,self.output_length)
 
-        return x  # shape (B, 3, output_length)
+        return z  # shape (B, 3, output_length)
 

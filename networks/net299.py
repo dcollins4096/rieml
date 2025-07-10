@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 296
-what = "294 again with the 295 code shape."
+idd = 299
+what = "295 with more dims (more like 288)"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,8 +22,8 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 512, 512
-    conv_channels = 64
+    hidden_dims = 1024  ,1024
+    conv_channels = 128
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
@@ -120,11 +120,34 @@ class main_net(nn.Module):
         self.conv1 = nn.Sequential(
             nn.Conv1d(3, conv_channels, kernel_size=kern, padding=padding, dilation=dil),
             nn.ReLU(),
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding2, dilation=dil2),
+            #nn.ReLU(),
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding3, dilation=dil3),
+            #nn.ReLU(),
+            #nn.Conv1d(conv_channels, conv_channels, kernel_size=kern, padding=padding4, dilation=dil4),
+            #nn.ReLU(),
             nn.Conv1d(conv_channels, 3, kernel_size=kern, padding=padding, dilation=dil),
             nn.ReLU()
         )
 
         # FC block 2: merge spatial info
+        if 0:
+            self.fc2 = nn.Sequential(
+                nn.Linear(3 * output_length, hidden_dims[0]),
+                nn.ReLU(),
+                nn.Linear(hidden_dims[0], 3 * output_length)
+            )
+        if 0:
+            in_dim = 3*output_length
+            out_dim = 3*output_length
+            layers=[]
+            dims = [in_dim] + list(hidden_dims) + [out_dim]
+            for i in range(len(dims)-1):
+                layers.append(nn.Linear(dims[i], dims[i+1]))
+                if i < len(dims) - 2:
+                    layers.append(nn.ReLU())
+                    print('relu')
+            self.fc2 = nn.Sequential(*layers)
         if 1:
             in_dim = 3*output_length
             out_dim = 3*output_length
@@ -183,12 +206,50 @@ class main_net(nn.Module):
         self.convdone.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
         self.fc1.apply(init_weights_constant)
+        #if characteristic:
+        #    self.forward=self.char_forward
+        #else:
+        #    self.forward=self.prim_forward
+        self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
+
         self.mse=nn.MSELoss()
+        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.criterion = self.criterion1
+
+        #self.attn = SelfAttention1D(channels=3, length=output_length)
+        #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
+        embed_dim=output_length
+        num_heads = 4
+        self.hl = nn.HuberLoss(delta=0.2)
         self.l1 = nn.L1Loss()
 
+        #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+
     def criterion(self,guess,target, initial=None):
+        #mse_weight, sobolev_weight = self.convex_combination()
+        #mse_weight=1
+        #mse = mse_weight*self.mse(target,guess)
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
+        #sobolev_weight=1
+        #sobolev = sobolev_weight*self.sobolev(target,guess)
+        #md = self.maxdiff(target,guess)
+        #phys = average_flux_conservation_loss(initial, guess)
+        #return sobolev+mse+0.1*md+0.1*phys
+        #print('mse %0.2e phys %0.2e'%(mse,phys))
+        #hl = self.hl(guess,target)
+        #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
         L1 = self.l1(target,guess)
-        return L1
+        #high_k = self.fft_penalty(target,guess)
+        #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
+        #if torch.isnan(tv):
+        #    pdb.set_trace()
+        return L1#+mse#+sobolev#+0.1*tv#+high_k#
 
     def forward(self, x):
         batch_size=x.shape[0]
@@ -196,6 +257,13 @@ class main_net(nn.Module):
         x = self.fc1(x)  # (batch_size, 3*output_length)
         x = self.relu1(x)
         x = x.view(batch_size, 3, self.output_length)  # shape (B, 3, L)
+
+        if 0:
+            rho, vel, pres = torch.chunk(x, 3, dim=1)
+            rho, weights = self.attn_rho(rho,rho,rho)
+            vel, weights = self.attn_vel(vel,vel,vel)
+            pres, weights=self.attn_pres(pres,pres,pres)
+            x = torch.cat([rho, vel, pres], dim=1)
 
         # Conv block 1: local patterns
         x = x + self.conv1(x)  # Residual connection
@@ -213,8 +281,8 @@ class main_net(nn.Module):
         x1 = self.conv3a(x)
         x2 = self.conv3b(x1)
         x3 = self.conv3c(x2)
-        x4 =self.conv3d(x3)
-        x5 =self.conv3e(x4)
+        x4 =x2+ self.conv3d(x3)
+        x5 =x1+ self.conv3e(x4)
         z = x+self.convdone(x5)
         
 

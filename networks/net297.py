@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 296
-what = "294 again with the 295 code shape."
+idd = 297
+whatidd = "Try some physics.  Learned quantities are now fluxes. Take 2, fix negatives"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,13 +22,13 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 512, 512
+    hidden_dims = 512,
     conv_channels = 64
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 50000
+    epochs = 20000
     lr = 1e-4
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
@@ -99,7 +99,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
 
 
 class main_net(nn.Module):
-    def __init__(self, output_length=1000, hidden_dims=(128, 128), conv_channels=32, characteristic=False):
+    def __init__(self, output_length=1001, hidden_dims=(128, 128), conv_channels=32, characteristic=False):
         super().__init__()
         self.output_length = output_length
 
@@ -216,9 +216,20 @@ class main_net(nn.Module):
         x4 =self.conv3d(x3)
         x5 =self.conv3e(x4)
         z = x+self.convdone(x5)
-        
 
-        #x = x.view(3,self.output_length)
+        U = z  # shape (B, 3, L)
 
-        return z  # shape (B, 3, output_length)
+        e1 = F.softplus(U[:,0,1:]-U[:,0,:-1])
+        e2 = U[:,1,1:]-U[:,1,:-1]
+        e3 = F.softplus(U[:,2,1:]-U[:,2,:-1])
+
+        gamma = 1.66667
+        eps = 1e-8
+        u = e2 / (e1 + eps)
+        p = (gamma-1)*(e3 - 0.5*(e2**2/(e1+eps)))
+
+        rho = e1
+        z_out = torch.stack([rho, p, u], dim=1)  # (B,3,L)
+
+        return z_out  # shape (B, 3, output_length)
 
