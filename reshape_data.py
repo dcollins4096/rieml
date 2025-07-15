@@ -4,8 +4,8 @@ import pdb
 reload(tube_loader)
 
 
-data = tube_loader.load_many()#check_file='tubes_take3.h5')
-tube_loader.write_one('tubes_take5b.h5',data)
+data = tube_loader.load_many(check_file='tubes_take5.h5')
+tube_loader.write_one('tubes_take5.h5',data)
 
 if 0:
     def checker(datum, parameter):

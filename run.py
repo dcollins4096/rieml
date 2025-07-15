@@ -16,7 +16,7 @@ reload(plot)
 
 
 import tube_loader
-import networks.net300 as net
+import networks.net312 as net
 reload(net)
 
 new_model = 1
@@ -26,20 +26,7 @@ train_model = 1
 testnum=net.idd
 #data = tube_loader.load_many()
 if 'data' not in dir():
-    alldata,allparameters = tube_loader.read_good_parameters("tubes_take5.h5")
-    alldata = torch.tensor(alldata,dtype=torch.float32)
-    allparameters = torch.tensor(allparameters,dtype=torch.float32)
-if 1:
-    Ntrain=1000 #len(data) - 10
-    Nvalid = 1100 #leaving 49 for validation
-    data={}
-    parameters={}
-    data['train'] = alldata[:Ntrain]
-    data['test'] = alldata[Ntrain:Nvalid]
-    data['validate'] = alldata[Nvalid:]
-    parameters['train'] = allparameters[:Ntrain]
-    parameters['test'] = allparameters[Ntrain:Nvalid]
-    parameters['validate'] = allparameters[Nvalid:]
+    data, parameters= tube_loader.read_good_parameters("tubes_take5.h5", nvalid=100, ntest=100)
 
 if new_model:
 

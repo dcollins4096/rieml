@@ -41,8 +41,8 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
         param = param1.view(1,6)
         nd+=1
         z = model(param)
-        z=z.view(3,1000)
         loss = model.criterion(z, datum[1], initial=datum[0])
+        z=z.view(3,1000)
         rows=1
         if characteristic:
             rows=2

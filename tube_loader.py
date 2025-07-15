@@ -68,7 +68,7 @@ def load_many(check_file=None):
         print("%s %d/%d"%(tube, nt, N))
         number = int(tube.split('/')[-1].split('_')[-1])
         if number in numbers_got:
-            print('skip')
+            print('skip',number)
             continue
         numbers.append(number)
         boo= consume("%s"%(tube))
@@ -97,7 +97,7 @@ def read_all_parameters(fname):
     fptr.close()
     return tubes, parameters
 
-def read_good_parameters(fname):
+def read_good_parameters(fname, nvalid=100,ntest=100):
     tubes,parameters = read_all_parameters(fname)
     tubes_out=[]
     param_out=[]
@@ -115,7 +115,12 @@ def read_good_parameters(fname):
             tubes_out.append(datum)
             param_out.append(param)
     #print("Start %d end %d"%(len(tubes), len(tubes_out)))
-    return tubes_out,param_out
+
+    alldata = torch.tensor(tubes_out,dtype=torch.float32)
+    allparameters = torch.tensor(param_out,dtype=torch.float32)
+    data={'validate':alldata[:nvalid], 'test':alldata[nvalid:nvalid+ntest],'train':alldata[nvalid+ntest:]}
+    parameters={'validate':allparameters[:nvalid], 'test':allparameters[nvalid:nvalid+ntest],'train':allparameters[nvalid+ntest:]}
+    return data, parameters
 
 def extract_validation(model, data, parameters):
     tubes_out=[]
