@@ -4,6 +4,7 @@ import glob
 import yt
 import numpy as np
 import pdb
+import torch
 
 
 def get_parameters(fname):

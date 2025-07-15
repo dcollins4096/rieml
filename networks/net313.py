@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 313
+what = "306 with more data"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,23 +22,33 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 1024  ,1024
-    conv_channels = 128
+    hidden_dims = 256,
+    conv_channels = 32
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 75000
-    lr = 5e-3
+    epochs = 300000
+    #epochs = 300
+    lr = 1e-3
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
 def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-3, batch_size=10, test_num=0, weight_decay=None):
-    optimizer = optim.Adam( model.parameters(), lr=lr)
-    scheduler = optim.lr_scheduler.MultiStepLR(
-        optimizer,
-        milestones=[30000, 40000,50000],  # change after N and N+M steps
-        gamma=0.75             # multiply by gamma each time
+    optimizer = optim.AdamW( model.parameters(), lr=lr)
+    #scheduler = optim.lr_scheduler.MultiStepLR(
+    #    optimizer,
+    #    milestones=[50000],  # change after N and N+M steps
+    #    gamma=0.1             # multiply by gamma each time
+    #)
+    from torch.optim.lr_scheduler import CyclicLR
+    scheduler = CyclicLR(
+            optimizer,
+            base_lr=1e-7,
+            max_lr=1e-3,
+            step_size_up=30000,
+            mode='triangular',   # or 'triangular2', 'exp_range'
+            cycle_momentum=False # if you use Adam, turn this off
     )
     losses=[]
     a = torch.arange(len(data))
@@ -51,8 +61,21 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
 
     t0 = time.time()
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
+    nsub = 0
     for epoch in range(epochs):
-        subset = torch.tensor(random.sample(list(a),batch_size))
+        #train on the bad ones.
+        if epoch % 10000 < 5000 and False:
+            if epoch % 100 == 0:
+                nsub=0
+            if nsub == 0:
+                train_loss = plot.compute_losses(model, data, parameters)
+
+            ars = torch.argsort(train_loss).flip(dims=[0])
+            subset = ars[batch_size*nsub:(nsub+1)*batch_size]
+            nsub += 1
+
+        else:
+            subset = torch.tensor(random.sample(list(a),batch_size))
         data_subset =  data[subset]
         param_subset = parameters[subset]
         optimizer.zero_grad()
@@ -104,7 +127,7 @@ class main_net(nn.Module):
         self.output_length = output_length
 
         # Project 6 input values to a pseudo-spatial format (3 channels)
-        self.fc1 = nn.Linear(6, 3 * output_length)
+        self.fc1 = nn.Linear(7, 3 * output_length)
         self.relu1 = nn.ReLU()
 
         # Conv block 1 (acts on the "3 x output_length" format)
@@ -184,12 +207,12 @@ class main_net(nn.Module):
             self.conv3b = nn.Sequential(
                 nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
-            self.conv3c = nn.Sequential(
-                nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
-            self.conv3d = nn.Sequential(
-                nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
+            #self.conv3c = nn.Sequential(
+            #    nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+            #    nn.ReLU())
+            #self.conv3d = nn.Sequential(
+            #    nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+            #    nn.ReLU())
             self.conv3e = nn.Sequential(
                 nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
@@ -200,8 +223,8 @@ class main_net(nn.Module):
         self.conv2.apply(init_weights_constant)
         self.conv3a.apply(init_weights_constant)
         self.conv3b.apply(init_weights_constant)
-        self.conv3c.apply(init_weights_constant)
-        self.conv3d.apply(init_weights_constant)
+        #self.conv3c.apply(init_weights_constant)
+        #self.conv3d.apply(init_weights_constant)
         self.conv3e.apply(init_weights_constant)
         self.convdone.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
@@ -213,29 +236,17 @@ class main_net(nn.Module):
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
-        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.criterion = self.criterion1
-
-        #self.attn = SelfAttention1D(channels=3, length=output_length)
-        #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
-        #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
-        #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
-        embed_dim=output_length
-        num_heads = 4
-        self.hl = nn.HuberLoss(delta=0.2)
+        self.log_mse_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.log_l1_weight = nn.Parameter(torch.tensor(0.0)) 
         self.l1 = nn.L1Loss()
-
-        #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
-        #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
-        #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
 
     def criterion(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
+        #mse_weight = torch.exp(self.log_mse_weight)
         #mse = mse_weight*self.mse(target,guess)
-        #sobolev_weight = torch.exp(self.log_derivative_weight)
+        l1_weight = 1#torch.exp(self.log_l1_weight)
+        L1 = l1_weight*self.l1(target,guess)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
@@ -244,7 +255,7 @@ class main_net(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        L1 = self.l1(target,guess)
+        #L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
@@ -280,9 +291,10 @@ class main_net(nn.Module):
         #x = x + self.conv3(x)
         x1 = self.conv3a(x)
         x2 = self.conv3b(x1)
-        x3 = self.conv3c(x2)
-        x4 =x2+ self.conv3d(x3)
-        x5 =x1+ self.conv3e(x4)
+        #x3 = self.conv3c(x2)
+        #x4 =x2+ self.conv3d(x3)
+        #x5 =x1+ self.conv3e(x4)
+        x5 =x1+ self.conv3e(x2)
         z = x+self.convdone(x5)
         
 

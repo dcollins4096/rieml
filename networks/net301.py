@@ -12,8 +12,10 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 301
+what = "288 horse with learning"
+goal = "want to improve my overall learning even on training set."
+gpt_says = "RMSprop L2 weight decay"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):

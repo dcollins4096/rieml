@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 314
+what = "295 with POSITIVE convex comb. of L1 and Sobolev"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,14 +22,14 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 1024  ,1024
-    conv_channels = 128
+    hidden_dims = 512, 512
+    conv_channels = 64
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 75000
-    lr = 5e-3
+    epochs = 50000
+    lr = 1e-4
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
@@ -37,8 +37,8 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.Adam( model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[30000, 40000,50000],  # change after N and N+M steps
-        gamma=0.75             # multiply by gamma each time
+        milestones=[25000, 35000,45000],  # change after N and N+M steps
+        gamma=0.1             # multiply by gamma each time
     )
     losses=[]
     a = torch.arange(len(data))
@@ -210,10 +210,9 @@ class main_net(nn.Module):
         #    self.forward=self.char_forward
         #else:
         #    self.forward=self.prim_forward
-        self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
-        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.weight_theta= nn.Parameter(torch.tensor(0.0)) 
         #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
         #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
         #self.criterion = self.criterion1
@@ -222,34 +221,48 @@ class main_net(nn.Module):
         #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
         #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
         #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
-        embed_dim=output_length
-        num_heads = 4
-        self.hl = nn.HuberLoss(delta=0.2)
+        #embed_dim=output_length
+        #num_heads = 4
+        #self.hl = nn.HuberLoss(delta=0.2)
         self.l1 = nn.L1Loss()
 
         #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
         #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
         #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+    def sobolev_derivatives(self,target,guess):
+        dx_target = target[:,1:]-target[:,:-1]
+        dx_guess  = guess[:,1:]-guess[:,:-1]
+        return dx_target, dx_guess
+    def sobolev(self,target,guess):
+        dx_target,dx_guess = self.sobolev_derivatives(target,guess)
+        sobolev = self.l1(dx_target,dx_guess)
+        return sobolev
+    def convex_combination(self):
+        theta = self.weight_theta
+        mse_weight = torch.cos(theta)**2
+        sobolev_weight = 1-torch.cos(theta)**2
+        #mse_weight, sobolev_weight = 0.8,0.1
+        return mse_weight, sobolev_weight
 
     def criterion(self,guess,target, initial=None):
-        #mse_weight, sobolev_weight = self.convex_combination()
+        mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
         #mse = mse_weight*self.mse(target,guess)
         #sobolev_weight = torch.exp(self.log_derivative_weight)
         #sobolev_weight=1
-        #sobolev = sobolev_weight*self.sobolev(target,guess)
+        sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
         #phys = average_flux_conservation_loss(initial, guess)
         #return sobolev+mse+0.1*md+0.1*phys
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        L1 = self.l1(target,guess)
+        L1 = mse_weight*self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
         #    pdb.set_trace()
-        return L1#+mse#+sobolev#+0.1*tv#+high_k#
+        return L1+sobolev#+0.1*tv#+high_k#
 
     def forward(self, x):
         batch_size=x.shape[0]

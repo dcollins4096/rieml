@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 315
+what = "288 with more data"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -28,8 +28,8 @@ def thisnet():
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 75000
-    lr = 5e-3
+    epochs = 50000
+    lr = 1e-4
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
@@ -37,8 +37,8 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.Adam( model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[30000, 40000,50000],  # change after N and N+M steps
-        gamma=0.75             # multiply by gamma each time
+        milestones=[25000, 35000,45000],  # change after N and N+M steps
+        gamma=0.1             # multiply by gamma each time
     )
     losses=[]
     a = torch.arange(len(data))
@@ -104,7 +104,7 @@ class main_net(nn.Module):
         self.output_length = output_length
 
         # Project 6 input values to a pseudo-spatial format (3 channels)
-        self.fc1 = nn.Linear(6, 3 * output_length)
+        self.fc1 = nn.Linear(7, 3 * output_length)
         self.relu1 = nn.ReLU()
 
         # Conv block 1 (acts on the "3 x output_length" format)
@@ -178,34 +178,23 @@ class main_net(nn.Module):
         kern3 = 7
         padding3 = dil3*(kern3-1)//2
         if 1:
-            self.conv3a = nn.Sequential(
+            self.conv3 = nn.Sequential(
                 nn.Conv1d(3, conv_channels, kernel_size=kern1, padding=padding1, dilation=dil1),
-                nn.ReLU())
-            self.conv3b = nn.Sequential(
+                nn.ReLU(),
                 nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
-                nn.ReLU())
-            self.conv3c = nn.Sequential(
+                nn.ReLU(),
                 nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
-            self.conv3d = nn.Sequential(
+                nn.ReLU(),
                 nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
-            self.conv3e = nn.Sequential(
+                nn.ReLU(),
                 nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
-                nn.ReLU())
-            self.convdone = nn.Sequential(
+                nn.ReLU(),
                 nn.Conv1d(conv_channels, 3, kernel_size=kern1, padding=padding1, dilation=dil1)
             )
         self.conv1.apply(init_weights_constant)
         self.conv2.apply(init_weights_constant)
-        self.conv3a.apply(init_weights_constant)
-        self.conv3b.apply(init_weights_constant)
-        self.conv3c.apply(init_weights_constant)
-        self.conv3d.apply(init_weights_constant)
-        self.conv3e.apply(init_weights_constant)
-        self.convdone.apply(init_weights_constant)
+        self.conv3.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
-        self.fc1.apply(init_weights_constant)
         #if characteristic:
         #    self.forward=self.char_forward
         #else:
@@ -277,16 +266,9 @@ class main_net(nn.Module):
         # Conv block 2: refine locally again
         x = x + self.conv2(x)
         #conv 3
-        #x = x + self.conv3(x)
-        x1 = self.conv3a(x)
-        x2 = self.conv3b(x1)
-        x3 = self.conv3c(x2)
-        x4 =x2+ self.conv3d(x3)
-        x5 =x1+ self.conv3e(x4)
-        z = x+self.convdone(x5)
-        
+        x = x + self.conv3(x)
 
         #x = x.view(3,self.output_length)
 
-        return z  # shape (B, 3, output_length)
+        return x  # shape (B, 3, output_length)
 

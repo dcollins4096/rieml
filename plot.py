@@ -13,7 +13,8 @@ plot_dir = "%s/plots"%os.environ['HOME']
 
 def compute_losses(model,data,parameters):
 
-    guesses = [model(param.view(1,6)) for param in parameters]
+    size=parameters[0].shape[0]
+    guesses = [model(param.view(1,size)) for param in parameters]
     losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(guesses,data)])
     return losses
 
@@ -38,7 +39,8 @@ def plot_hist(loss_train,loss_test,loss_validate,testnum):
 def test_plot(datalist, parameters,model, fname="plot", characteristic=False, delta=False):
     nd=-1
     for datum, param1 in zip(datalist,parameters):
-        param = param1.view(1,6)
+        size = param1.shape[0]
+        param = param1.view(1,size)
         nd+=1
         z = model(param)
         loss = model.criterion(z, datum[1], initial=datum[0])

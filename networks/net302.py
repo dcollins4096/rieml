@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 302
+what = "288 with also L2"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -28,8 +28,8 @@ def thisnet():
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 75000
-    lr = 5e-3
+    epochs = 50000
+    lr = 1e-3
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
@@ -37,7 +37,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.Adam( model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[30000, 40000,50000],  # change after N and N+M steps
+        milestones=[35000, 40000,50000],  # change after N and N+M steps
         gamma=0.75             # multiply by gamma each time
     )
     losses=[]
@@ -213,29 +213,17 @@ class main_net(nn.Module):
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
-        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
-        #self.criterion = self.criterion1
-
-        #self.attn = SelfAttention1D(channels=3, length=output_length)
-        #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
-        #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
-        #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
-        embed_dim=output_length
-        num_heads = 4
-        self.hl = nn.HuberLoss(delta=0.2)
+        self.log_mse_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.log_l1_weight = nn.Parameter(torch.tensor(0.0)) 
         self.l1 = nn.L1Loss()
-
-        #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
-        #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
-        #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
 
     def criterion(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
-        #mse = mse_weight*self.mse(target,guess)
-        #sobolev_weight = torch.exp(self.log_derivative_weight)
+        mse_weight = torch.exp(self.log_mse_weight)
+        mse = mse_weight*self.mse(target,guess)
+        l1_weight = torch.exp(self.log_l1_weight)
+        L1 = l1_weight*self.l1(target,guess)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
@@ -244,12 +232,12 @@ class main_net(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        L1 = self.l1(target,guess)
+        #L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
         #    pdb.set_trace()
-        return L1#+mse#+sobolev#+0.1*tv#+high_k#
+        return L1+mse#+sobolev#+0.1*tv#+high_k#
 
     def forward(self, x):
         batch_size=x.shape[0]

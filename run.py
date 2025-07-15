@@ -16,7 +16,7 @@ reload(plot)
 
 
 import tube_loader
-import networks.net312 as net
+import networks.net315 as net
 reload(net)
 
 new_model = 1
@@ -26,7 +26,7 @@ train_model = 1
 testnum=net.idd
 #data = tube_loader.load_many()
 if 'data' not in dir():
-    data, parameters= tube_loader.read_good_parameters("tubes_take5.h5", nvalid=100, ntest=100)
+    data, parameters= tube_loader.read_good_parameters("tubes_take6.h5", nvalid=50, ntest=100)
 
 if new_model:
 

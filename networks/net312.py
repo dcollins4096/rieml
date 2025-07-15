@@ -12,8 +12,8 @@ import numpy as np
 import plot
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 300
-what = "288 with even more training."
+idd = 312
+what = "295 plus more data"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,14 +22,14 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 1024  ,1024
-    conv_channels = 128
+    hidden_dims = 512, 512
+    conv_channels = 64
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 75000
-    lr = 5e-3
+    epochs = 50000
+    lr = 1e-4
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
@@ -37,8 +37,8 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.Adam( model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer,
-        milestones=[30000, 40000,50000],  # change after N and N+M steps
-        gamma=0.75             # multiply by gamma each time
+        milestones=[25000, 35000,45000],  # change after N and N+M steps
+        gamma=0.1             # multiply by gamma each time
     )
     losses=[]
     a = torch.arange(len(data))
@@ -104,7 +104,7 @@ class main_net(nn.Module):
         self.output_length = output_length
 
         # Project 6 input values to a pseudo-spatial format (3 channels)
-        self.fc1 = nn.Linear(6, 3 * output_length)
+        self.fc1 = nn.Linear(7, 3 * output_length)
         self.relu1 = nn.ReLU()
 
         # Conv block 1 (acts on the "3 x output_length" format)
