@@ -24,11 +24,31 @@ def get_parameters(fname):
             if line.startswith(field):
                 #only want the first velocity
                 chunk = line.split('=')[1].strip().split(" ")[0]
-                parameters[field]=chunk
+                parameters[field]=float(chunk)
     output = [parameters[field] for field in fieldlist]
     return output
 
 
+def consume_one(directory, frame):
+    OutputLogName = "%s/OutputLog"%directory
+    fptr = open(OutputLogName,'r')
+    lines = fptr.readlines()
+    pf1 = lines[frame].split()[2]
+    fptr.close()
+
+    ds = yt.load("%s/%s"%(directory,pf1))
+    time = ds['InitialTime']
+
+    fields = ['density','pressure','velocity_x']
+
+    data = []
+    for nf, field in enumerate(fields):
+        ray = ds.ortho_ray(0,[0.0,0.0])
+        data.append(list(ray[field].v))
+
+    parameters = get_parameters(directory+"/tube.enzo")
+    parameters.append(time)
+    return data, parameters
 def consume(directory):
     OutputLogName = "%s/OutputLog"%directory
     fptr = open(OutputLogName,'r')
@@ -39,6 +59,7 @@ def consume(directory):
 
     ds0 = yt.load("%s/%s"%(directory,pf0))
     ds1 = yt.load("%s/%s"%(directory,pf1))
+    time = ds1['InitialTime']
     ds_list = [ds0,ds1]
 
     fields = ['density','pressure','velocity_x']
@@ -51,12 +72,13 @@ def consume(directory):
             pair[nds].append(list(ray[field].v))
 
     parameters = get_parameters(directory+"/tube.enzo")
+    parameters.append(time)
     return pair, parameters
 
 
 def load_many(check_file=None):
-    base = '/scratch3/dcollins/Paper79/tube_test/tubes'
-    tubes = sorted(glob.glob("%s/tube*"%base))[:100]
+    base = '/scratch3/dcollins/Paper79/tube_test/res1000/tubes'
+    tubes = sorted(glob.glob("%s/tube*"%base))
     dataset = []
     N = len(tubes)
     numbers = []
@@ -65,6 +87,7 @@ def load_many(check_file=None):
     if check_file is not None:
         fptr = h5py.File(check_file,'r')
         numbers_got = fptr['numbers'][()]
+        fptr.close()
     for nt,tube in enumerate(tubes):
         print("%s %d/%d"%(tube, nt, N))
         number = int(tube.split('/')[-1].split('_')[-1])
@@ -76,6 +99,33 @@ def load_many(check_file=None):
         dataset += [boo[0]]
 
         parameters.append(boo[1])
+    dataset = np.array(dataset)
+    return dataset, numbers, parameters
+
+def load_many_time(check_file=None):
+    base = '/scratch3/dcollins/Paper79/tube_test/unit/tubes'
+    tubes = sorted(glob.glob("%s/tube*"%base))[:3]
+    dataset = []
+    N = len(tubes)
+    numbers = []
+    numbers_got = []
+    parameters = []
+    if check_file is not None:
+        fptr = h5py.File(check_file,'r')
+        numbers_got = fptr['numbers'][()]
+        fptr.close()
+    for nt,tube in enumerate(tubes):
+        print("%s %d/%d"%(tube, nt, N))
+        number = int(tube.split('/')[-1].split('_')[-1])
+        if number in numbers_got:
+            print('skip',number)
+            continue
+        numbers.append(number)
+        for frame in range(1,12):
+            boo= consume_one("%s"%(tube),frame)
+            dataset += [boo[0]]
+
+            parameters.append(boo[1])
     dataset = np.array(dataset)
     return dataset, numbers, parameters
 
