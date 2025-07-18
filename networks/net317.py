@@ -80,7 +80,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
         param_subset = parameters[subset]
         optimizer.zero_grad()
         output1=model(param_subset)
-        loss = model.criterion(output1, data_subset)
+        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
         loss.backward()
         optimizer.step()
         scheduler.step()
