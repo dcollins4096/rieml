@@ -10,10 +10,11 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import plot
+import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 313
-what = "306 with more data"
+idd = 317
+what = "316 with the inner layer"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,8 +23,8 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 256,
-    conv_channels = 32
+    hidden_dims = 1024,1024
+    conv_channels = 128
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
@@ -79,7 +80,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
         param_subset = parameters[subset]
         optimizer.zero_grad()
         output1=model(param_subset)
-        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+        loss = model.criterion(output1, data_subset)
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -93,10 +94,16 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             time_per_epoch = tel/epoch
             epoch_remaining = epochs-epoch
             time_remaining_s = time_per_epoch*epoch_remaining
-            hrs = time_remaining_s//3600
-            minute = (time_remaining_s-hrs*3600)//60
-            sec = (time_remaining_s - hrs*3600-minute*60)#//60
-            time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            eta = tnow+time_remaining_s
+            etab = datetime.datetime.fromtimestamp(eta)
+
+            if 1:
+                hrs = time_remaining_s//3600
+                minute = (time_remaining_s-hrs*3600)//60
+                sec = (time_remaining_s - hrs*3600-minute*60)#//60
+                time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            if 1:
+                eta = "%0.2d:%0.2d:%0.2d"%(etab.hour, etab.minute, int(etab.second))
 
             mean = validate_losses.mean()
             std = validate_losses.std()
@@ -106,8 +113,10 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             maxlist.append(mmax)
             meanlist.append(mean)
             stdlist.append(std)
-            print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
-                  (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+           # print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+           #       (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+            print("test%d %d L %0.2e LR %0.2e left %8s  eta %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+                  (idd,epoch,loss, optimizer.param_groups[0]['lr'],time_remaining, eta, mean, std, mmin, mmax))
             loss_batch=[]
     print("Run time", tel)
     plt.clf()
@@ -206,12 +215,12 @@ class main_net(nn.Module):
             self.conv3b = nn.Sequential(
                 nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
-            #self.conv3c = nn.Sequential(
-            #    nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-            #    nn.ReLU())
-            #self.conv3d = nn.Sequential(
-            #    nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-            #    nn.ReLU())
+            self.conv3c = nn.Sequential(
+                nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+                nn.ReLU())
+            self.conv3d = nn.Sequential(
+                nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+                nn.ReLU())
             self.conv3e = nn.Sequential(
                 nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
@@ -222,8 +231,8 @@ class main_net(nn.Module):
         self.conv2.apply(init_weights_constant)
         self.conv3a.apply(init_weights_constant)
         self.conv3b.apply(init_weights_constant)
-        #self.conv3c.apply(init_weights_constant)
-        #self.conv3d.apply(init_weights_constant)
+        self.conv3c.apply(init_weights_constant)
+        self.conv3d.apply(init_weights_constant)
         self.conv3e.apply(init_weights_constant)
         self.convdone.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
@@ -290,10 +299,10 @@ class main_net(nn.Module):
         #x = x + self.conv3(x)
         x1 = self.conv3a(x)
         x2 = self.conv3b(x1)
-        #x3 = self.conv3c(x2)
-        #x4 =x2+ self.conv3d(x3)
-        #x5 =x1+ self.conv3e(x4)
-        x5 =x1+ self.conv3e(x2)
+        x3 = self.conv3c(x2)
+        x4 =x2+ self.conv3d(x3)
+        x5 =x1+ self.conv3e(x4)
+        #x5 =x1+ self.conv3e(x2)
         z = x+self.convdone(x5)
         
 

@@ -10,10 +10,11 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import plot
+import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 313
-what = "306 with more data"
+idd = 316
+what = "313 and 308 had a baby"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -22,8 +23,8 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 256,
-    conv_channels = 32
+    hidden_dims = 1024,1024
+    conv_channels = 128
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
@@ -93,10 +94,16 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             time_per_epoch = tel/epoch
             epoch_remaining = epochs-epoch
             time_remaining_s = time_per_epoch*epoch_remaining
-            hrs = time_remaining_s//3600
-            minute = (time_remaining_s-hrs*3600)//60
-            sec = (time_remaining_s - hrs*3600-minute*60)#//60
-            time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            eta = tnow+time_remaining_s
+            etab = datetime.datetime.fromtimestamp(eta)
+
+            if 1:
+                hrs = time_remaining_s//3600
+                minute = (time_remaining_s-hrs*3600)//60
+                sec = (time_remaining_s - hrs*3600-minute*60)#//60
+                time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            if 1:
+                eta = "%0.2d:%0.2d:%0.2d"%(etab.hour, etab.minute, int(etab.second))
 
             mean = validate_losses.mean()
             std = validate_losses.std()
@@ -106,8 +113,10 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             maxlist.append(mmax)
             meanlist.append(mean)
             stdlist.append(std)
-            print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
-                  (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+           # print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+           #       (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+            print("test%d %d L %0.2e LR %0.2e left %8s  eta %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+                  (idd,epoch,loss, optimizer.param_groups[0]['lr'],time_remaining, eta, mean, std, mmin, mmax))
             loss_batch=[]
     print("Run time", tel)
     plt.clf()

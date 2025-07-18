@@ -10,10 +10,11 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 import plot
+import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 313
-what = "306 with more data"
+idd = 400
+what = "312 but with time series"
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -28,16 +29,16 @@ def thisnet():
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 300000
-    lr = 1e-3
+    epochs = 50000
+    lr = 1e-4
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
 
 def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-3, batch_size=10, test_num=0, weight_decay=None):
-    optimizer = optim.AdamW( model.parameters(), lr=lr)
+    optimizer = optim.Adam( model.parameters(), lr=lr)
     #scheduler = optim.lr_scheduler.MultiStepLR(
     #    optimizer,
-    #    milestones=[50000],  # change after N and N+M steps
+    #    milestones=[25000, 35000,45000],  # change after N and N+M steps
     #    gamma=0.1             # multiply by gamma each time
     #)
     from torch.optim.lr_scheduler import CyclicLR
@@ -45,7 +46,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             optimizer,
             base_lr=1e-7,
             max_lr=1e-3,
-            step_size_up=30000,
+            step_size_up=500,
             mode='triangular',   # or 'triangular2', 'exp_range'
             cycle_momentum=False # if you use Adam, turn this off
     )
@@ -60,26 +61,13 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
 
     t0 = time.time()
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
-    nsub = 0
     for epoch in range(epochs):
-        #train on the bad ones.
-        if epoch % 10000 < 5000 and False:
-            if epoch % 100 == 0:
-                nsub=0
-            if nsub == 0:
-                train_loss = plot.compute_losses(model, data, parameters)
-
-            ars = torch.argsort(train_loss).flip(dims=[0])
-            subset = ars[batch_size*nsub:(nsub+1)*batch_size]
-            nsub += 1
-
-        else:
-            subset = torch.tensor(random.sample(list(a),batch_size))
+        subset = torch.tensor(random.sample(list(a),batch_size))
         data_subset =  data[subset]
         param_subset = parameters[subset]
         optimizer.zero_grad()
         output1=model(param_subset)
-        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+        loss = model.criterion(output1, data_subset)
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -93,10 +81,16 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             time_per_epoch = tel/epoch
             epoch_remaining = epochs-epoch
             time_remaining_s = time_per_epoch*epoch_remaining
-            hrs = time_remaining_s//3600
-            minute = (time_remaining_s-hrs*3600)//60
-            sec = (time_remaining_s - hrs*3600-minute*60)#//60
-            time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            eta = tnow+time_remaining_s
+            etab = datetime.datetime.fromtimestamp(eta)
+
+            if 1:
+                hrs = time_remaining_s//3600
+                minute = (time_remaining_s-hrs*3600)//60
+                sec = (time_remaining_s - hrs*3600-minute*60)#//60
+                time_remaining="%02d:%02d:%02d"%(hrs,minute,sec)
+            if 1:
+                eta = "%0.2d:%0.2d:%0.2d"%(etab.hour, etab.minute, int(etab.second))
 
             mean = validate_losses.mean()
             std = validate_losses.std()
@@ -106,8 +100,10 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
             maxlist.append(mmax)
             meanlist.append(mean)
             stdlist.append(std)
-            print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
-                  (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+           # print("test%d Epoch %d loss %0.2e LR %0.2e time left %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+           #       (idd,epoch,loss, optimizer.param_groups[0]['lr'], time_remaining, mean, std, mmin, mmax))
+            print("test%d %d L %0.2e LR %0.2e left %8s  eta %8s loss mean %0.2e var %0.2e min %0.2e max %0.2e"%
+                  (idd,epoch,loss, optimizer.param_groups[0]['lr'],time_remaining, eta, mean, std, mmin, mmax))
             loss_batch=[]
     print("Run time", tel)
     plt.clf()
@@ -235,17 +231,29 @@ class main_net(nn.Module):
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
-        self.log_mse_weight = nn.Parameter(torch.tensor(0.0)) 
-        self.log_l1_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.criterion = self.criterion1
+
+        #self.attn = SelfAttention1D(channels=3, length=output_length)
+        #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
+        embed_dim=output_length
+        num_heads = 4
+        self.hl = nn.HuberLoss(delta=0.2)
         self.l1 = nn.L1Loss()
+
+        #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
 
     def criterion(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
-        #mse_weight = torch.exp(self.log_mse_weight)
         #mse = mse_weight*self.mse(target,guess)
-        l1_weight = 1#torch.exp(self.log_l1_weight)
-        L1 = l1_weight*self.l1(target,guess)
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
@@ -254,7 +262,7 @@ class main_net(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        #L1 = self.l1(target,guess)
+        L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
