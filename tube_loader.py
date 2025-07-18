@@ -103,7 +103,10 @@ def read_good_parameters(fname, nvalid=100,ntest=100):
     tubes_out=[]
     param_out=[]
     for datum, param in zip(tubes,parameters):
-        f = datum[1]
+        if len(datum.shape) == 3:
+            f = datum[1]
+        else:
+            f = datum
         keep=True
         for nf,field in enumerate(['density','pressure','velocity']):
             #print('L',f[nf][0:5], param[2*nf])

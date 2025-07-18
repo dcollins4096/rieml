@@ -11,11 +11,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 plot_dir = "%s/plots"%os.environ['HOME']
 
-def compute_losses(model,data,parameters):
+def compute_losses_old(model,data,parameters):
 
     size=parameters[0].shape[0]
     guesses = [model(param.view(1,size)) for param in parameters]
     losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(guesses,data)])
+    return losses
+def compute_losses(model,data,parameters):
+    
+
+    size=parameters[0].shape[0]
+    guesses = [model(param.view(1,size)) for param in parameters]
+    if len(data.shape) == 4:
+        losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(guesses,data)])
+    elif len(data.shape)==3:
+        losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat.view(1,3,1000)) for mod,dat in zip(guesses,data)])
+    else:
+        pring('oops, something broke.')
+        pdb.set_trace()
+
     return losses
 
 
@@ -43,7 +57,8 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
         param = param1.view(1,size)
         nd+=1
         z = model(param)
-        loss = model.criterion(z, datum[1], initial=datum[0])
+        #loss = model.criterion(z, datum[1], initial=datum[0])
+        loss=-1
         z=z.view(3,1000)
         rows=1
         if characteristic:
@@ -61,10 +76,14 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
         fields = ['density','pressure','velocity']
         ymax = [2,2,1.1]
         for nf,field in enumerate(fields):
-            ax[nf].plot( datum[0][nf], c='k')
-            ymax[nf]=max([ymax[nf],datum[0][nf].max().item()])
-            ax[nf].plot( datum[1][nf], c='k', linestyle='--')
-            ymax[nf]=max([ymax[nf],datum[1][nf].max().item()])
+            if len(datum.shape) == 3:
+                ax[nf].plot( datum[0][nf], c='k')
+                ymax[nf]=max([ymax[nf],datum[0][nf].max().item()])
+                ax[nf].plot( datum[1][nf], c='k', linestyle='--')
+                ymax[nf]=max([ymax[nf],datum[1][nf].max().item()])
+            elif len(datum.shape) == 2:
+                ax[nf].plot( datum[nf], c='k')
+                ymax[nf]=max([ymax[nf],datum[nf].max().item()])
             zzz = z[nf].detach().numpy()
             if np.isnan(zzz).sum() > 0:
                 print("Is nan", np.isnan(zzz).sum(), nd, nf)
@@ -100,7 +119,7 @@ def test_plot(datalist, parameters,model, fname="plot", characteristic=False, de
             #ax[1].set(ylim=[0,2])
             #ax[2].set(ylim=[-1.1,1.1])
         fig.tight_layout()
-        oname="%s/rieML_%s_%02d"%(plot_dir,fname,nd)
+        oname="%s/rieML_%s_%04d"%(plot_dir,fname,nd)
         fig.savefig(oname)
         print(oname)
         plt.close(fig)
