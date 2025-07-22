@@ -13,8 +13,9 @@ import plot
 import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 313
-what = "306 with more data"
+idd = 406
+what = "402 with remedial training"
+time_data=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -23,13 +24,13 @@ def init_weights_constant(m):
 
 def thisnet():
 
-    hidden_dims = 256,
-    conv_channels = 32
+    hidden_dims = 1024,1024
+    conv_channels = 128
     model = main_net(hidden_dims=hidden_dims, conv_channels=conv_channels)
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 300000
+    epochs = 180000
     lr = 1e-3
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
@@ -38,7 +39,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.AdamW( model.parameters(), lr=lr)
     #scheduler = optim.lr_scheduler.MultiStepLR(
     #    optimizer,
-    #    milestones=[50000],  # change after N and N+M steps
+    #    milestones=[25000, 35000,45000],  # change after N and N+M steps
     #    gamma=0.1             # multiply by gamma each time
     #)
     from torch.optim.lr_scheduler import CyclicLR
@@ -62,26 +63,31 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     t0 = time.time()
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
     nsub = 0
+    loss_array = torch.ones(data.shape[0])
     for epoch in range(epochs):
         #train on the bad ones.
-        if epoch % 10000 < 5000 and False:
-            if epoch % 100 == 0:
-                nsub=0
+        if (epoch >= 60000 and epoch < 120000):
             if nsub == 0:
-                train_loss = plot.compute_losses(model, data, parameters)
+                print('sort losses')
+                #train_loss = plot.compute_losses(model, data, parameters)
+                args = torch.argsort(loss_array)
 
-            ars = torch.argsort(train_loss).flip(dims=[0])
-            subset = ars[batch_size*nsub:(nsub+1)*batch_size]
+            #ars = torch.argsort(train_loss).flip(dims=[0])
+            subset = args[batch_size*nsub:(nsub+1)*batch_size]
             nsub += 1
+            if epoch % 300 == 0:
+                nsub=0
 
         else:
-            subset = torch.tensor(random.sample(list(a),batch_size))
+            subset = torch.randperm(N)[:batch_size]
+            #subset = torch.tensor(random.sample(list(a),batch_size))
         data_subset =  data[subset]
         param_subset = parameters[subset]
         optimizer.zero_grad()
         output1=model(param_subset)
-        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+        loss = model.criterion(output1, data_subset)
         loss.backward()
+        loss_array[subset] = loss.item()
         optimizer.step()
         scheduler.step()
         tnow = time.time()
@@ -244,17 +250,29 @@ class main_net(nn.Module):
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
-        self.log_mse_weight = nn.Parameter(torch.tensor(0.0)) 
-        self.log_l1_weight = nn.Parameter(torch.tensor(0.0)) 
+        self.log_derivative_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_tv_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.log_high_k_weight = nn.Parameter(torch.tensor(0.0)) 
+        #self.criterion = self.criterion1
+
+        #self.attn = SelfAttention1D(channels=3, length=output_length)
+        #self.attn_rho = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_vel = SelfAttention1D(channels=1, length=output_length)
+        #self.attn_pres = SelfAttention1D(channels=1, length=output_length)
+        embed_dim=output_length
+        num_heads = 4
+        self.hl = nn.HuberLoss(delta=0.2)
         self.l1 = nn.L1Loss()
+
+        #self.attn_rho =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_vel =  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
+        #self.attn_pres=  nn.MultiheadAttention(embed_dim=embed_dim, num_heads=num_heads,batch_first=True)
 
     def criterion(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
-        #mse_weight = torch.exp(self.log_mse_weight)
         #mse = mse_weight*self.mse(target,guess)
-        l1_weight = 1#torch.exp(self.log_l1_weight)
-        L1 = l1_weight*self.l1(target,guess)
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
@@ -263,7 +281,7 @@ class main_net(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        #L1 = self.l1(target,guess)
+        L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):

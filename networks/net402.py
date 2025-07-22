@@ -15,6 +15,7 @@ plot_dir = "%s/plots"%os.environ['HOME']
 
 idd = 402
 what = "317+401 All the bells and time."
+time_data=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -29,7 +30,9 @@ def thisnet():
     return model
 
 def train(model,data,parameters, validatedata, validateparams):
-    epochs = 300000
+    #epochs = 300000
+    epochs  = 180000
+    #epochs = 300
     lr = 1e-3
     batch_size=3
     trainer(model,data,parameters,validatedata,validateparams,epochs=epochs,lr=lr,batch_size=batch_size)
@@ -62,7 +65,8 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     t0 = time.time()
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
     for epoch in range(epochs):
-        subset = torch.tensor(random.sample(list(a),batch_size))
+        #subset = torch.tensor(random.sample(list(a),batch_size))
+        subset = torch.randperm(N)[:batch_size]
         data_subset =  data[subset]
         param_subset = parameters[subset]
         optimizer.zero_grad()
@@ -202,12 +206,12 @@ class main_net(nn.Module):
             self.conv3b = nn.Sequential(
                 nn.Conv1d(conv_channels, 2*conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
-            self.conv3c = nn.Sequential(
-                nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
-            self.conv3d = nn.Sequential(
-                nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
-                nn.ReLU())
+            #self.conv3c = nn.Sequential(
+            #    nn.Conv1d(2*conv_channels, 4*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+            #    nn.ReLU())
+            #self.conv3d = nn.Sequential(
+            #    nn.Conv1d(4*conv_channels, 2*conv_channels, kernel_size=kern3, padding=padding3, dilation=dil3),
+            #    nn.ReLU())
             self.conv3e = nn.Sequential(
                 nn.Conv1d(2*conv_channels, conv_channels, kernel_size=kern2, padding=padding2, dilation=dil2),
                 nn.ReLU())
@@ -218,8 +222,8 @@ class main_net(nn.Module):
         self.conv2.apply(init_weights_constant)
         self.conv3a.apply(init_weights_constant)
         self.conv3b.apply(init_weights_constant)
-        self.conv3c.apply(init_weights_constant)
-        self.conv3d.apply(init_weights_constant)
+        #self.conv3c.apply(init_weights_constant)
+        #self.conv3d.apply(init_weights_constant)
         self.conv3e.apply(init_weights_constant)
         self.convdone.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
@@ -298,10 +302,10 @@ class main_net(nn.Module):
         #x = x + self.conv3(x)
         x1 = self.conv3a(x)
         x2 = self.conv3b(x1)
-        x3 = self.conv3c(x2)
-        x4 =x2+ self.conv3d(x3)
-        x5 =x1+ self.conv3e(x4)
-        #x5 =x1+ self.conv3e(x2)
+        #x3 = self.conv3c(x2)
+        #x4 =x2+ self.conv3d(x3)
+        #x5 =x1+ self.conv3e(x4)
+        x5 =x1+ self.conv3e(x2)
         z = x+self.convdone(x5)
         
 

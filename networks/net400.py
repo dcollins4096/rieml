@@ -15,6 +15,7 @@ plot_dir = "%s/plots"%os.environ['HOME']
 
 idd = 400
 what = "312 but with time series"
+time_data=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):

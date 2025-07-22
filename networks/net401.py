@@ -15,6 +15,7 @@ plot_dir = "%s/plots"%os.environ['HOME']
 
 idd = 401
 what = "401 with the middle convolution and better time series"
+time_data=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):

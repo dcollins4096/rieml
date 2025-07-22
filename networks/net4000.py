@@ -13,8 +13,9 @@ import plot
 import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 313
-what = "306 with more data"
+idd = 4000
+what = "timing test"
+time_data=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -38,7 +39,7 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     optimizer = optim.AdamW( model.parameters(), lr=lr)
     #scheduler = optim.lr_scheduler.MultiStepLR(
     #    optimizer,
-    #    milestones=[50000],  # change after N and N+M steps
+    #    milestones=[25000, 35000,45000],  # change after N and N+M steps
     #    gamma=0.1             # multiply by gamma each time
     #)
     from torch.optim.lr_scheduler import CyclicLR
@@ -61,26 +62,14 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
 
     t0 = time.time()
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
-    nsub = 0
     for epoch in range(epochs):
-        #train on the bad ones.
-        if epoch % 10000 < 5000 and False:
-            if epoch % 100 == 0:
-                nsub=0
-            if nsub == 0:
-                train_loss = plot.compute_losses(model, data, parameters)
-
-            ars = torch.argsort(train_loss).flip(dims=[0])
-            subset = ars[batch_size*nsub:(nsub+1)*batch_size]
-            nsub += 1
-
-        else:
-            subset = torch.tensor(random.sample(list(a),batch_size))
+        subset = torch.tensor(random.sample(list(a),batch_size))
         data_subset =  data[subset]
         param_subset = parameters[subset]
         optimizer.zero_grad()
         output1=model(param_subset)
-        loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
+        loss = model.criterion(output1, data_subset)
+        #loss = model.criterion(output1, data_subset[:,1,:,:], initial=data_subset[:,0,:,:])
         loss.backward()
         optimizer.step()
         scheduler.step()
@@ -247,14 +236,11 @@ class main_net(nn.Module):
         self.log_mse_weight = nn.Parameter(torch.tensor(0.0)) 
         self.log_l1_weight = nn.Parameter(torch.tensor(0.0)) 
         self.l1 = nn.L1Loss()
-
     def criterion(self,guess,target, initial=None):
         #mse_weight, sobolev_weight = self.convex_combination()
         #mse_weight=1
-        #mse_weight = torch.exp(self.log_mse_weight)
         #mse = mse_weight*self.mse(target,guess)
-        l1_weight = 1#torch.exp(self.log_l1_weight)
-        L1 = l1_weight*self.l1(target,guess)
+        #sobolev_weight = torch.exp(self.log_derivative_weight)
         #sobolev_weight=1
         #sobolev = sobolev_weight*self.sobolev(target,guess)
         #md = self.maxdiff(target,guess)
@@ -263,7 +249,7 @@ class main_net(nn.Module):
         #print('mse %0.2e phys %0.2e'%(mse,phys))
         #hl = self.hl(guess,target)
         #tv = torch.abs(guess[...,1:]-guess[...,:-1]).mean()
-        #L1 = self.l1(target,guess)
+        L1 = self.l1(target,guess)
         #high_k = self.fft_penalty(target,guess)
         #print("L1 %0.2e sob %0.2e tv %0.2e"%(L1,sobolev,tv))
         #if torch.isnan(tv):
