@@ -17,27 +17,12 @@ def compute_losses_faster(model, data, parameters):
     return L1
 
 def compute_losses_old(model,data,parameters):
-
     size=parameters[0].shape[0]
     guesses = [model(param.view(1,size)) for param in parameters]
     losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(guesses,data)])
     return losses
-def compute_losses_good(model,data,parameters):
-    
 
-    size=parameters[0].shape[0]
-    guesses = [model(param.view(1,size)) for param in parameters]
-    if len(data.shape) == 4:
-        losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat[1].view(1,3,1000)) for mod,dat in zip(guesses,data)])
-    elif len(data.shape)==3:
-        losses = torch.tensor([model.criterion(mod.view(1,3,1000), dat.view(1,3,1000)) for mod,dat in zip(guesses,data)])
-    else:
-        pring('oops, something broke.')
-        pdb.set_trace()
-
-    return losses
 def compute_losses(model,data,parameters):
-    
     size=parameters[0].shape[0]
     guesses = [model(param.view(1,size)) for param in parameters]
     if len(data.shape) == 4:
@@ -51,14 +36,49 @@ def compute_losses(model,data,parameters):
     return losses
 
 nframes=11
+def compute_losses_next_fast(model, data, parameters, tubelist=None):
+    ntubes = len(data)//nframes
+    n = torch.ones(len(data), dtype=torch.bool)
+    np1 = torch.ones(len(data), dtype=torch.bool)
+    n[10::11]=False
+    np1[::11]=False
+
+    data_n = data[n]
+    para_n = parameters[n]
+    data_np1 = data[np1]
+    para_np1 = parameters[np1]
+    moo = model(data_n, para_n, para_np1)
+    diff = torch.abs(moo-data_np1).view(ntubes,10,3,1000)
+    L1 = diff.sum(axis=-1).sum(axis=-1)/(diff.shape[-1]*diff.shape[-2])
+    loss = {}
+    loss['min'] = L1.min(axis=1).values
+    loss['max'] = L1.max(axis=1).values
+    loss['mean'] = L1.mean(axis=1)
+    return loss
+
+def compute_losses_fast(model, data, parameters):
+    ntubes = len(data)//nframes
+    guess = model(parameters)
+    diff = torch.abs(guess-data).view(ntubes,11,3,1000)
+    L1 = diff.sum(axis=-1).sum(axis=-1)/(diff.shape[-1]*diff.shape[-2])
+    loss = {}
+    loss['min'] = L1.min(axis=1).values
+    loss['max'] = L1.max(axis=1).values
+    loss['mean'] = L1.mean(axis=1)
+    return loss
+
+nframes=11
 def compute_losses_next(model, data, parameters, tubelist=None):
     ntube = len(data)//nframes  
     if tubelist is None:
         tubelist = torch.arange(ntube)
     framelist = torch.arange(nframes-1)
-    loss_by_tube=torch.zeros(len(tubelist))
+    loss={}
+    loss['mean']=torch.zeros(len(tubelist))
+    loss['min'] =torch.zeros(len(tubelist))
+    loss['max'] =torch.zeros(len(tubelist))
+    this_tube=torch.zeros(len(framelist))
     for nt in tubelist:
-        loss=0
         for nf in framelist:
             i = nt*nframes+nf
             datum_n = data[i]
@@ -66,12 +86,70 @@ def compute_losses_next(model, data, parameters, tubelist=None):
             p_n = parameters[i]
             p_np1= parameters[i+1]
             out = model(datum_n, p_n, p_np1)
-            loss+=  model.criterion(out,datum_np1)
-        loss_by_tube[nt] = loss/nframes
-    return loss_by_tube
+            this_tube[nf]= model.criterion(out,datum_np1)
+        loss['mean'][nt]=this_tube.mean()
+        loss['min'][nt]=this_tube.min()
+        loss['max'][nt]=this_tube.max()
+    return loss
+
+def loss_by_tube(model,data,parameters,tubelist=None):
+    did=False
+    all_loss = {}
+    if hasattr(model,'next_frame'):
+        if model.next_frame:
+            did=True
+            for suite in ['validate','test','train']:
+                print('loss',suite)
+                all_loss[suite] = compute_losses_next_fast(model, data[suite], parameters[suite], tubelist=tubelist)
+    if not did:
+        for suite in ['validate','test','train']:
+            print('loss',suite)
+            all_loss[suite] = compute_losses_fast(model, data[suite], parameters[suite])
+    return all_loss
 
 
 def plot_by_tube(data, parameters,model,fname="tube", tubelist=None):
+    ntube = len(data)//nframes  
+    if tubelist is None:
+        tubelist = torch.arange(ntube)
+    next_frame = model.next_frame
+    framelist = torch.arange(nframes)
+    for nt in tubelist:
+        for nframe in framelist:
+            i = nt*nframes+nframe
+            rows=1
+            fields = ['density','pressure','velocity']
+            fig,axes=plt.subplots(rows,3,figsize=(12,4))
+            ax0=axes
+            ymax = [2,2,1.1]
+            datum_n = data[i]
+            z = None
+            if next_frame:
+                if nframe>0:
+                    z = model(data[i-1], parameters[i-1], parameters[i])[0]
+            if not next_frame:
+                z = model(parameters[i].view(1,7))[0]
+
+
+            for nf,field in enumerate(fields):
+                ax0[nf].plot( datum_n[nf], c='k')
+                ymax[nf]=max([ymax[nf],datum_n[nf].max().item()])
+                if z is not None:
+                    zzz = z[nf].detach().numpy()
+                    if np.isnan(zzz).sum() > 0:
+                        print("Is nan", np.isnan(zzz).sum(), nd, nf)
+                    ax0[nf].plot( zzz, c='r')
+                    ymax[nf]=max([ymax[nf],z.max().item()])
+                ax0[nf].set(ylabel=field)
+            ax0[0].set(ylim=[0,ymax[0]])
+            ax0[1].set(ylim=[0,ymax[1]])
+            ax0[2].set(ylim=[-1.1,ymax[2]])
+            oname="%s/%s_t%04d_f%04d"%(plot_dir,fname,nt,nframe)
+            print(oname)
+            fig.savefig(oname)
+
+
+def plot_next(data, parameters,model,fname="tube", tubelist=None):
     ntube = len(data)//nframes  
     if tubelist is None:
         tubelist = torch.arange(ntube)
@@ -113,15 +191,25 @@ def plot_by_tube(data, parameters,model,fname="tube", tubelist=None):
 
 
 
+def plot_hist2(all_loss,testnum):
+    fig, axes = plt.subplots(1,3,figsize=(12,4))
+    for nm,mmm in enumerate(['min','mean','max']):
+        plot_hist(all_loss['train'][mmm], all_loss['test'][mmm],all_loss['validate'][mmm],testnum,ax=axes[nm])
+
+    fig.tight_layout()
+    fig.savefig('%s/plots/errhist_test%d'%(os.environ['HOME'],testnum))
 
 
 
-def plot_hist(loss_train,loss_test,loss_validate,testnum):
+def plot_hist(loss_train,loss_test,loss_validate,testnum, ax=None):
     everything = torch.cat([loss_train, loss_test,loss_validate])
     bmin = min([min(everything),1e-4])
     bmax = max([max(everything),1e-1])
     bins = np.geomspace(bmin,bmax,64)
-    fig,ax=plt.subplots(1,1)
+    save=False
+    if ax is None:
+        fig,ax=plt.subplots(1,1)
+        save=True
     for nl in [0,1,2]:
         lll = [loss_train, loss_test, loss_validate][nl]
         hist, bins, obj=ax.hist(lll.detach().numpy(), bins=bins, histtype='step', 
@@ -129,8 +217,9 @@ def plot_hist(loss_train,loss_test,loss_validate,testnum):
         bc = 0.5*(bins[1:]+bins[:-1])
         #Lmax = bc[np.argmax(hist)]
     ax.legend(loc=0)
-    ax.set(xlabel='loss',xscale='log')
-    fig.savefig('%s/plots/errhist_test%d'%(os.environ['HOME'],testnum))
+    ax.set(xlabel='loss',xscale='log', yscale='log')
+    if save:
+        fig.savefig('%s/plots/errhist_test%d'%(os.environ['HOME'],testnum))
 
 
 def test_plot(datalist, parameters,model, fname="plot", characteristic=False, delta=False):

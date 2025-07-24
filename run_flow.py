@@ -16,23 +16,27 @@ reload(plot)
 
 
 import tube_loader
-import networks.net500 as net
-reload(net)
 
 new_model = 1
 load_model = 0
 train_model = 1
-make_plot = 1
-save_model = 0
+save_model = 1
+make_plot = 0
 nframes=11
-testnum=net.idd
 #data = tube_loader.load_many()
+if new_model:
+    import networks.net502 as net
+    reload(net)
+    model = net.thisnet()
+
+testnum=net.idd
+
 if 'data' not in dir():
     read=False
     if hasattr(net,'time_data'):
         if net.time_data:
             print('read time')
-            data, parameters,numbers= tube_loader.read_parameters("tubes_take8.h5", nvalid=5*nframes, ntest=5*nframes)
+            data, parameters= tube_loader.read_good_parameters_by_tube("tubes_take8.h5", nvalid=5*nframes, ntest=20*nframes)
             #data, parameters= tube_loader.read_good_parameters("tubes_take8.h5", nvalid=50, ntest=100)
             #for 404
             #data['train'] = data['train'][:3000]
@@ -43,9 +47,6 @@ if 'data' not in dir():
         data, parameters= tube_loader.read_good_parameters("tubes_take6.h5", nvalid=50, ntest=100)
     #data, parameters= tube_loader.read_good_parameters("tubes_take8.h5", nvalid=200, ntest=500)
 
-if new_model:
-
-    model = net.thisnet()
 
 if load_model:
 
@@ -70,22 +71,21 @@ if train_model:
     total_time="%02d:%02d:%02d"%(hrs,minute,sec)
 
 if make_plot:
-    #print('losses', len(data['train']), len(data['test']), len(data['validate']))
-    #loss_train = plot.compute_losses(model, data['train'][::10],parameters['train'][::10])
-    #print('done with the long one')
-    #loss_test = plot.compute_losses(model, data['test'],parameters['test'])
-    #loss_validate = plot.compute_losses(model, data['validate'],parameters['validate'])
-    #args_train = torch.argsort(loss_train)
-    #args_test = torch.argsort(loss_test)
-    ##args_valiiate = torch.argsort(loss_validate)
+    if 'all_loss' not in dir():
+        all_loss = plot.loss_by_tube(model,data,parameters)
+    plot.plot_hist2(all_loss, model.idd)
 
-    #plot.plot_hist(loss_train,loss_test,loss_validate,net.idd)
-
-    zzz=plot.plot_by_tube(data['test'], parameters['test'], model, fname="test%d_test_best"%testnum)
-    #zzz=plot.test_plot(data['test'], parameters['test'], model, fname="test%d_test_worst"%testnum)
-    #zzz=plot.test_plot(data['train'], parameters['train'], model, fname="test%d_train_best"%testnum)
-    #zzz=plot.test_plot(data['train'], parameters['train'], model, fname="test%d_train_worst"%testnum)
+    #zzz=plot.plot_by_tube(data['validate'], parameters['validate'], model, fname="test%d_validate"%testnum)
+    #zzz=plot.plot_by_tube(data['test'], parameters['test'], model, fname="test%d_test"%testnum)
+    worst_worst = torch.argsort(all_loss['train']['max'])[-5:]
+    worst_mean =  torch.argsort(all_loss['train']['mean'])[-5:]
     #zzz=plot.test_plot(data['validate'], parameters['validate'], model, fname="test%04d_avalidate"%testnum)
+    #zzz=plot.test_plot(data['test'], parameters['test'], model, fname="test%d_test_worst"%testnum)
+    zzz=plot.plot_by_tube(data['train'], parameters['train'], model, fname="test%d_train_worst_worst"%testnum, 
+                      tubelist=worst_worst)
+    zzz=plot.plot_by_tube(data['train'], parameters['train'], model, fname="test%d_train_worst_mean"%testnum,
+                      tubelist=worst_mean)
+    #zzz=plot.test_plot(data['train'], parameters['train'], model, fname="test%d_train_worst"%testnum)
 
 if 1:
     nparam = sum(p.numel() for p in model.parameters() if p.requires_grad)

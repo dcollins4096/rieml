@@ -99,6 +99,46 @@ def read_all_parameters(fname):
     fptr.close()
     return tubes, parameters,numbers
 
+nframes=11
+def read_good_parameters_by_tube(fname, nvalid=100,ntest=100):
+    tubes,parameters, numbers = read_all_parameters(fname)
+    tubes_out=[]
+    param_out=[]
+    numbers_out=[]
+    n=-1
+    ntubes = len(tubes)//nframes
+    for ntube in torch.arange(ntubes):
+        keep=True
+        this_tube=[]
+        this_param=[]
+        for frame in torch.arange(nframes):
+            i = ntube*nframes+frame
+            this_tube.append(tubes[i])
+            this_param.append(parameters[i])
+
+            f = tubes[i]
+            param = parameters[i]
+            for nf,field in enumerate(['density','pressure','velocity']):
+                #print('L',f[nf][0:5], param[2*nf])
+                if (np.abs(f[nf][0:20]-param[2*nf])>1e-5).any():
+                    keep=False
+                #print('R',f[nf][-5:], param[2*nf+1])
+                if (np.abs(f[nf][-20:]-param[2*nf+1])>1e-5).any():
+                    keep=False
+        if keep:
+            tubes_out += this_tube
+            param_out += this_param
+    #print("Start %d end %d"%(len(tubes), len(tubes_out)))
+
+    alldata = torch.tensor(tubes_out,dtype=torch.float32)
+    allparameters = torch.tensor(param_out,dtype=torch.float32)
+    allnumbers = torch.tensor(numbers_out, dtype=torch.int)
+    data={'validate':alldata[:nvalid], 'test':alldata[nvalid:nvalid+ntest],'train':alldata[nvalid+ntest:]}
+    parameters={'validate':allparameters[:nvalid], 'test':allparameters[nvalid:nvalid+ntest],'train':allparameters[nvalid+ntest:]}
+    #numbers={'validate':allnumbers[:nvalid], 'test':allnumbers[nvalid:nvalid+ntest],'train':allnumbers[nvalid+ntest:]}
+    return data, parameters
+
+
 def read_good_parameters(fname, nvalid=100,ntest=100):
     tubes,parameters, numbers = read_all_parameters(fname)
     tubes_out=[]

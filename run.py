@@ -24,6 +24,8 @@ load_model = 0
 train_model = 1
 make_plot = 1
 save_model = 0
+pdb.set_trace()
+print('you dont want this one')
 
 testnum=net.idd
 #data = tube_loader.load_many()

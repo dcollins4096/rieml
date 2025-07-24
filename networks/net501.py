@@ -13,9 +13,10 @@ import plot
 import datetime
 plot_dir = "%s/plots"%os.environ['HOME']
 
-idd = 500
-what = "next time step"
+idd = 501
+what = "scheduler games, several streamlines"
 time_data=True
+next_frame=True
 
 def init_weights_constant(m):
     if isinstance(m, nn.Linear):
@@ -32,7 +33,7 @@ def thisnet():
 def train(model,data,parameters, validatedata, validateparams):
     #epochs = 300000
     #epochs  = 50000
-    epochs  = 180000
+    epochs  = 600
     #epochs = 300
     lr = 1e-3
     batch_size=3
@@ -41,13 +42,8 @@ def train(model,data,parameters, validatedata, validateparams):
 def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-3, batch_size=10, test_num=0, weight_decay=None):
     optimizer = optim.AdamW( model.parameters(), lr=lr)
     from torch.optim.lr_scheduler import CyclicLR
-    scheduler = CyclicLR(
-            optimizer,
-            base_lr=1e-7,
-            max_lr=1e-3,
-            step_size_up=30000,
-            mode='triangular',   # or 'triangular2', 'exp_range'
-            cycle_momentum=False # if you use Adam, turn this off
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+            optimizer, max_lr=1e-3, total_steps=epochs
     )
     losses=[]
     a = torch.arange(len(data))
@@ -62,11 +58,17 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
     minlist=[];meanlist=[];maxlist=[];stdlist=[]
     nframes = 11
     ntubes = data.shape[0]//nframes
+
+    all_pairs = [(tube, frame) for tube in range(ntubes) for frame in range(nframes-1)]
+    all_pairs = torch.tensor(all_pairs)
+    num_samples = len(all_pairs)
+
+    nsubcycle = 0
     for epoch in range(epochs):
-        tubes = torch.randperm(ntubes)[:batch_size]
-        frames = torch.randperm(nframes-1)[:batch_size]
-        subset_n = tubes*nframes+frames
-        subset_np1 = subset_n+1
+        idxs = torch.randint(0, num_samples, (batch_size,))
+        batch_pairs = all_pairs[idxs]
+        subset_n  = batch_pairs[:,0]*nframes + batch_pairs[:,1]
+        subset_np1 = subset_n + 1
 
         data_n =  data[subset_n]
         param_n = parameters[subset_n]
@@ -82,7 +84,8 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
         tel = tnow-t0
         if (epoch>0 and epoch%100==0) or epoch==10:
             model.eval()
-            validate_losses = plot.compute_losses_next(model, validatedata, validateparams)
+            all_loss = plot.compute_losses_next(model, validatedata, validateparams)
+            validate_losses = all_loss['mean']
             model.train()
 
             time_per_epoch = tel/epoch
@@ -126,11 +129,14 @@ def trainer(model, data,parameters, validatedata,validateparams,epochs=1, lr=1e-
 class main_net(nn.Module):
     def __init__(self, output_length=1000, hidden_dims=(128, 128), conv_channels=32, characteristic=False):
         super().__init__()
+        self.idd = idd
+        self.next_frame = next_frame
+        self.time_data = time_data
         self.output_length = output_length
 
         # Project 6 input values to a pseudo-spatial format (3 channels)
-        self.fc1 = nn.Linear(5*output_length, 5 * output_length)
-        self.relu1 = nn.ReLU()
+        #self.fc1 = nn.Linear(5*output_length, 5 * output_length)
+        #self.relu1 = nn.ReLU()
 
         # Conv block 1 (acts on the "3 x output_length" format)
         dil = 1
@@ -213,7 +219,7 @@ class main_net(nn.Module):
         self.conv3e.apply(init_weights_constant)
         self.convdone.apply(init_weights_constant)
         self.fc2.apply(init_weights_constant)
-        self.fc1.apply(init_weights_constant)
+        #self.fc1.apply(init_weights_constant)
         self.T = nn.Parameter(torch.eye(3) + 0.01 * torch.randn(3, 3)) 
 
         self.mse=nn.MSELoss()
@@ -235,10 +241,10 @@ class main_net(nn.Module):
         batch_size=p_n.shape[0]
         x = torch.cat([datum_n, tna,tnb], dim=1)  # shape: [5, 1000]
         # FC1 to expand global features into spatial representation
-        x_flat = x.view(x.size(0),-1)
-        x = self.fc1(x_flat)  # (batch_size, 3*output_length)
-        x = self.relu1(x)
-        x = x.view(batch_size, 5, self.output_length)  # shape (B, 3, L)
+        #x_flat = x.view(x.size(0),-1)
+        #x = self.fc1(x_flat)  # (batch_size, 3*output_length)
+        #x = self.relu1(x)
+        #x = x.view(batch_size, 5, self.output_length)  # shape (B, 3, L)
 
         # Conv block 1: local patterns
         x = x + self.conv1(x)  # Residual connection
