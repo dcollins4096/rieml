@@ -103,7 +103,8 @@ def load_many(check_file=None):
     return dataset, numbers, parameters
 
 def load_many_time(check_file=None):
-    base = '/scratch3/dcollins/Paper79/tube_test/unit/tubes'
+    #base = '/scratch3/dcollins/Paper79/tube_test/unit/tubes'
+    base = '/scratch3/dcollins/Paper79/tube_test/unitlog/tubes'
     tubes = sorted(glob.glob("%s/tube*"%base))
     dataset = []
     N = len(tubes)

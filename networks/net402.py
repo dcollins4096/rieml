@@ -302,7 +302,11 @@ class main_net(nn.Module):
         #x = x + self.conv3(x)
         x1 = self.conv3a(x)
         x2 = self.conv3b(x1)
+<<<<<<< Updated upstream
         #x3 = self.conv3c(x2)
+=======
+        x3 = self.conv3c(x2)
+>>>>>>> Stashed changes
         #x4 =x2+ self.conv3d(x3)
         #x5 =x1+ self.conv3e(x4)
         x5 =x1+ self.conv3e(x2)

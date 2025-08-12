@@ -8,6 +8,9 @@ if 0:
     tube_loader.write_one('tubes_take6.h5',data)
 if 1:
     data = tube_loader.load_many_time()#check_file='tubes_take5.h5')
+    tube_loader.write_one('tubes_take10.h5',data)
+if 0:
+    data = tube_loader.load_many_time()#check_file='tubes_take5.h5')
     tube_loader.write_one('tubes_take8.h5',data)
 
 if 0:
